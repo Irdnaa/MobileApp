@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'forgot_password.dart';
+import 'register.dart'; 
+import '../home/homepage.dart';
 
 class Login extends StatefulWidget {
   const Login({Key? key}) : super(key: key);
@@ -22,7 +24,10 @@ class _LoginState extends State<Login> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('✅ Login successful!')),
         );
-        // Navigate to home page or dashboard
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomePage()),
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('❌ Invalid credentials')),
@@ -81,7 +86,7 @@ class _LoginState extends State<Login> {
                           ),
                         ),
                         validator: (value) =>
-                        value == null || value.isEmpty ? 'Please enter your email' : null,
+                            value == null || value.isEmpty ? 'Please enter your email' : null,
                       ),
                       const SizedBox(height: 20),
                       TextFormField(
@@ -95,14 +100,14 @@ class _LoginState extends State<Login> {
                           ),
                         ),
                         validator: (value) =>
-                        value == null || value.isEmpty ? 'Please enter your password' : null,
+                            value == null || value.isEmpty ? 'Please enter your password' : null,
                       ),
                       const SizedBox(height: 10),
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
                           onPressed: () {
-                            Navigator.push (
+                            Navigator.push(
                               context,
                               MaterialPageRoute(builder: (_) => const ForgotPassword()),
                             );
@@ -136,7 +141,24 @@ class _LoginState extends State<Login> {
                         'Demo Login:\nuser@example.com / 123456',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                      )
+                      ),
+                      const SizedBox(height: 20),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const Register()),
+                          );
+                        },
+                        child: const Text(
+                          'Sign Up',
+                          style: TextStyle(
+                            decoration: TextDecoration.underline,
+                            color: Colors.blueAccent,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),

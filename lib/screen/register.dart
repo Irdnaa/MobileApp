@@ -161,7 +161,7 @@ class _RegisterState extends State<Register> {
                                 ),
                                 onPressed: () {
                                   if (_formkey.currentState!.validate()) {
-                                    Navigator.pushNamed(context, '/login');
+                                    Navigator.pushNamed(context, '/');
                                   }
                                 },
                                 child: Text(
