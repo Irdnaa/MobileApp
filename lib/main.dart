@@ -4,11 +4,11 @@ import 'package:flutter_app/screen/login.dart';
 
 void main() => runApp(MaterialApp(
   debugShowCheckedModeBanner: false,
-  initialRoute: '/login',
+  initialRoute: '/',
   routes: {
 
-    '/login': (context) => Login(),
-    '/': (context) => Register()
+    '/': (context) => Login(),
+    '/register': (context) => Register()
     
   },
 ));
