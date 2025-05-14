@@ -6,8 +6,10 @@ void main() => runApp(MaterialApp(
   debugShowCheckedModeBanner: false,
   initialRoute: '/',
   routes: {
-    '/': (context) => Register(),
-    '/login': (context) => Login()
+
+    '/': (context) => Login(),
+    '/register': (context) => Register()
+    
   },
 ));
 
