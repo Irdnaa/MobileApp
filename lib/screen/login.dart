@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'forgot_password.dart';
-import 'register.dart'; 
 import '../home/homepage.dart';
+import 'forgot_password.dart';
+import 'register.dart';
 
 class Login extends StatefulWidget {
   const Login({Key? key}) : super(key: key);
@@ -15,6 +15,8 @@ class _LoginState extends State<Login> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  bool _obscureText = true;
+
   void _mockLogin() {
     if (_formKey.currentState!.validate()) {
       final email = _emailController.text;
@@ -24,7 +26,8 @@ class _LoginState extends State<Login> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('✅ Login successful!')),
         );
-        Navigator.pushReplacement(
+
+        Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const HomePage()),
         );
@@ -91,10 +94,24 @@ class _LoginState extends State<Login> {
                       const SizedBox(height: 20),
                       TextFormField(
                         controller: _passwordController,
-                        obscureText: true,
+                        obscureText: _obscureText,
                         decoration: InputDecoration(
                           labelText: 'Password',
                           prefixIcon: Icon(Icons.lock),
+                          suffixIcon: Padding(
+                            padding: const EdgeInsets.fromLTRB(0, 0, 4, 0),
+                            child: IconButton(
+                              onPressed: () {
+                                setState(() {
+                                  _obscureText = !_obscureText;
+                                });
+                              },
+                              icon: Icon(
+                                  _obscureText ? Icons.visibility : Icons.visibility_off_rounded
+                              ),
+                              color: Colors.grey,
+                            ),
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -145,6 +162,7 @@ class _LoginState extends State<Login> {
                       const SizedBox(height: 20),
                       GestureDetector(
                         onTap: () {
+
                           Navigator.push(
                             context,
                             MaterialPageRoute(builder: (_) => const Register()),

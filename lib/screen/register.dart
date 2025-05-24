@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:form_field_validator/form_field_validator.dart';
+import 'login.dart';
 
 class Register extends StatefulWidget {
   const Register({Key? key}) : super(key: key);
@@ -11,12 +12,13 @@ class Register extends StatefulWidget {
 class _RegisterState extends State<Register> {
   Map userData = {};
   final _formkey = GlobalKey<FormState>();
+
+  String _password = '';
+  bool _obscureText = true;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Register'),
-      ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -57,52 +59,19 @@ class _RegisterState extends State<Register> {
                             Padding(
                               padding: const EdgeInsets.all(12.0),
                               child: TextFormField(
-                                // validator: ((value) {
-                                //   if (value == null || value.isEmpty) {
-                                //     return 'please enter some text';
-                                //   } else if (value.length < 5) {
-                                //     return 'Enter atleast 5 Charecter';
-                                //   }
-
-                                //   return null;
-                                // }),
                                 validator: MultiValidator([
-                                  RequiredValidator(errorText: 'Enter first name'),
+                                  RequiredValidator(errorText: 'Enter name'),
                                   MinLengthValidator(3,
-                                      errorText: 'First name should be at least 3 character'),
+                                      errorText: 'Name should be at least 2 character'),
                                 ]).call,
 
                                 decoration: InputDecoration(
-                                    hintText: 'Enter first name',
-                                    labelText: 'First Name',
+                                    hintText: 'Enter name',
+                                    labelText: 'Name',
                                     prefixIcon: Icon(
                                       Icons.person,
                                       color: Colors.green,
                                     ),
-                                    errorStyle: TextStyle(fontSize: 18.0),
-                                    border: OutlineInputBorder(
-                                        borderSide: BorderSide(color: Colors.red),
-                                        borderRadius:
-                                        BorderRadius.all(Radius.circular(9.0)))),
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: TextFormField(
-                                validator: MultiValidator([
-                                  RequiredValidator(errorText: 'Enter last name'),
-                                  MinLengthValidator(3,
-                                      errorText:
-                                      'Last name should be at least 3 character'),
-                                ]).call,
-                                decoration: InputDecoration(
-                                    hintText: 'Enter last name',
-                                    labelText: 'Last Name',
-                                    prefixIcon: Icon(
-                                      Icons.person,
-                                      color: Colors.grey,
-                                    ),
-                                    errorStyle: TextStyle(fontSize: 18.0),
                                     border: OutlineInputBorder(
                                         borderSide: BorderSide(color: Colors.red),
                                         borderRadius:
@@ -124,7 +93,6 @@ class _RegisterState extends State<Register> {
                                       Icons.email,
                                       color: Colors.lightBlue,
                                     ),
-                                    errorStyle: TextStyle(fontSize: 18.0),
                                     border: OutlineInputBorder(
                                         borderSide: BorderSide(color: Colors.red),
                                         borderRadius:
@@ -152,7 +120,75 @@ class _RegisterState extends State<Register> {
                                       Icons.phone,
                                       color: Colors.grey,
                                     ),
-                                    errorStyle: TextStyle(fontSize: 18.0),
+                                    border: OutlineInputBorder(
+                                        borderSide: BorderSide(color: Colors.red),
+                                        borderRadius:
+                                        BorderRadius.all(Radius.circular(9)))),
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: TextFormField(
+                                obscureText: _obscureText,
+                                onChanged: (val) => _password = val,
+                                validator: MultiValidator([
+                                  RequiredValidator(errorText: 'Enter password'),
+                                  MinLengthValidator(6, errorText: 'Password must be at least 6 digits long'),
+                                  //PatternValidator(r'(?=.*?[#?!@$%^&*-])', errorText: 'Password must have at least one special character')
+                                ]).call,
+                                decoration: InputDecoration(
+                                    hintText: 'Password',
+                                    labelText: 'Password',
+                                    prefixIcon: Icon(
+                                      Icons.lock,
+                                      color: Colors.grey,
+                                    ),
+                                    suffixIcon: Padding(
+                                        padding: const EdgeInsets.fromLTRB(0, 0, 4, 0),
+                                        child: IconButton(
+                                          onPressed: () {
+                                            setState(() {
+                                              _obscureText = !_obscureText;
+                                            });
+                                          },
+                                          icon: Icon(
+                                            _obscureText ? Icons.visibility : Icons.visibility_off_rounded
+                                          ),
+                                          color: Colors.grey,
+                                        ),
+                                    ),
+                                    border: OutlineInputBorder(
+                                        borderSide: BorderSide(color: Colors.red),
+                                        borderRadius:
+                                        BorderRadius.all(Radius.circular(9)))),
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: TextFormField(
+                                obscureText: _obscureText,
+                                validator: (val) => MatchValidator(errorText: 'Passwords do not match').validateMatch(val!, _password),
+                                decoration: InputDecoration(
+                                    hintText: 'Confirm password',
+                                    labelText: 'Confirm password',
+                                    prefixIcon: Icon(
+                                      Icons.lock,
+                                      color: Colors.grey,
+                                    ),
+                                    suffixIcon: Padding(
+                                      padding: const EdgeInsets.fromLTRB(0, 0, 4, 0),
+                                      child: IconButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            _obscureText = !_obscureText;
+                                          });
+                                        },
+                                        icon: Icon(
+                                          _obscureText ? Icons.visibility : Icons.visibility_off_rounded
+                                        ),
+                                        color: Colors.grey,
+                                      ),
+                                    ),
                                     border: OutlineInputBorder(
                                         borderSide: BorderSide(color: Colors.red),
                                         borderRadius:
@@ -180,7 +216,14 @@ class _RegisterState extends State<Register> {
                                           ),
                                           onPressed: () {
                                             if (_formkey.currentState!.validate()) {
-                                              Navigator.pushNamed(context, '/');
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(content: Text('✅ Register successful!')),
+                                              );
+
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(builder: (_) => const Login()),
+                                              );
                                             }
                                           },
                                           child: Text(
@@ -188,23 +231,24 @@ class _RegisterState extends State<Register> {
                                             style: TextStyle(color: Colors.white, fontSize: 22),
                                           )),
                                       ),
-                                      SizedBox(
-                                        width: 150.0,
-                                        child: ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.blue,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(30),
-                                            )
+                                      const SizedBox(height: 20),
+                                      GestureDetector(
+                                        onTap: () {
+
+                                          Navigator.pushReplacement(
+                                            context,
+                                            MaterialPageRoute(builder: (_) => const Login()),
+                                          );
+                                        },
+                                        child: const Text(
+                                          'Sign In',
+                                          style: TextStyle(
+                                            decoration: TextDecoration.underline,
+                                            color: Colors.blueAccent,
+                                            fontWeight: FontWeight.bold,
                                           ),
-                                          onPressed: () {
-                                              Navigator.pushNamed(context, '/');
-                                          },
-                                          child: Text(
-                                            'Sign In',
-                                            style: TextStyle(color: Colors.white, fontSize: 22),
-                                          )),
-                                      )
+                                        ),
+                                      ),
                                     ]
                                   ),
                                 )

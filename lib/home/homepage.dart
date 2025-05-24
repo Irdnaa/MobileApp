@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../screen/login.dart';
 import 'personalization.dart';
 
 class HomePage extends StatelessWidget {
@@ -12,30 +13,50 @@ class HomePage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Home Page'),
-        centerTitle: true,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: Center(
-              child: Text(
-                'Hello, $username',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ],
+        centerTitle: true
       ),
       body: Center(
-        child: ElevatedButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => PersonalizationPage()),
-            );
-          },
-          child: const Text('Go to Personalization'),
+        child: Column(
+            children: [
+              Center(
+                child: Padding(
+                    padding: const EdgeInsets.all(25.0),
+                    child: Text(
+                      'Hello, $username',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                )
+              ),
+              SizedBox(
+                width: 250.0,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => PersonalizationPage()),
+                    );
+                  },
+                  child: const Text('Go to Personalization'),
+                )
+              ),
+              SizedBox(
+                width: 250.0,
+                child: ElevatedButton(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('✅ Logout successful!')),
+                    );
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => Login()),
+                    );
+                  },
+                  child: const Text('Logout'),
+                ),
+              )
+            ]
         ),
-      ),
+      )
     );
   }
 }
