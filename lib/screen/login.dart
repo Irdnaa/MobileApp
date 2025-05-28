@@ -17,12 +17,38 @@ class _LoginState extends State<Login> {
 
   bool _obscureText = true;
 
-  void _mockLogin() {
-    if (_formKey.currentState!.validate()) {
-      final email = _emailController.text;
-      final password = _passwordController.text;
+Future<void> _firebaseLogin() async {
+  if (_formKey.currentState!.validate()) {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
 
-      if (email == 'user@example.com' && password == '123456') {
+    try {
+      // Try to sign in with Firebase Auth
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      // If successful, navigate to HomePage
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('✅ Login successful!')),
+      );
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const HomePage()),
+      );
+    } 
+    on FirebaseAuthException catch (e) {
+      // Handle Firebase Auth errors
+      String message = '❌ not registered';
+      if (e.code == 'user-not-found' || e.code == 'wrong-password') {
+        message = '❌ Invalid email or password';
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
+if (email == 'user@example.com' && password == '123456') {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('✅ Login successful!')),
         );
@@ -36,8 +62,15 @@ class _LoginState extends State<Login> {
           SnackBar(content: Text('❌ Invalid credentials')),
         );
       }
-    }
+    
+    
   }
+  
+ 
+
+      
+  
+}
 
   @override
   Widget build(BuildContext context) {
@@ -140,7 +173,7 @@ class _LoginState extends State<Login> {
                         width: double.infinity,
                         height: 50,
                         child: ElevatedButton(
-                          onPressed: _mockLogin,
+                          onPressed: _firebaseLogin,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Color(0xFF4facfe),
                             shape: RoundedRectangleBorder(
