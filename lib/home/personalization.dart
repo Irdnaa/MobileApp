@@ -1,16 +1,23 @@
 import 'package:flutter/material.dart';
 
 class PersonalizationPage extends StatefulWidget {
-  const PersonalizationPage({super.key});
+  final bool budgetPlanningEnabled;
+  const PersonalizationPage({super.key, this.budgetPlanningEnabled = true});
 
   @override
   _PersonalizationPageState createState() => _PersonalizationPageState();
 }
 
 class _PersonalizationPageState extends State<PersonalizationPage> {
-  bool budgetPlanningEnabled = true;
+  late bool budgetPlanningEnabled;
   bool savingTipsEnabled = true;
   bool spendingTrackerEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    budgetPlanningEnabled = widget.budgetPlanningEnabled;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,10 +77,11 @@ class _PersonalizationPageState extends State<PersonalizationPage> {
             // Save Button
             ElevatedButton.icon(
               onPressed: () {
-                // Save preferences logic here
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text("Preferences saved")),
                 );
+                // Return the updated budgetPlanningEnabled value to HomePage
+                Navigator.pop(context, budgetPlanningEnabled);
               },
               icon: Icon(Icons.save),
               label: Text("Save Preferences"),

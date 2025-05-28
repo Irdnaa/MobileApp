@@ -57,11 +57,7 @@ if (email == 'user@example.com' && password == '123456') {
           context,
           MaterialPageRoute(builder: (_) => const HomePage()),
         );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('❌ Invalid credentials')),
-        );
-      }
+      } 
     
     
   }
