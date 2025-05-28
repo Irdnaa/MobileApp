@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class PersonalizationPage extends StatefulWidget {
+  const PersonalizationPage({super.key});
+
   @override
   _PersonalizationPageState createState() => _PersonalizationPageState();
 }

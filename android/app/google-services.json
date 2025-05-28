@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "279340482782",
+    "project_id": "naksimpan-f396c",
+    "storage_bucket": "naksimpan-f396c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:279340482782:android:95cb985f2ce70b5db8c24f",
+        "android_client_info": {
+          "package_name": "com.example.flutter_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "279340482782-s2dljum4oea3cp7ptt3vqbh3ek00eajf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDxCdCunPcRWEQ0E_zka8waQ6IcJZBBREo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "279340482782-s2dljum4oea3cp7ptt3vqbh3ek00eajf.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

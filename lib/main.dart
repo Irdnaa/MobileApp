@@ -1,18 +1,32 @@
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/screen/register.dart';
 import 'package:flutter_app/screen/login.dart';
 
-void main() => runApp(MaterialApp(
-  debugShowCheckedModeBanner: false,
-  initialRoute: '/',
-  routes: {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  if(kIsWeb){
+  await Firebase.initializeApp(options:FirebaseOptions(apiKey: "AIzaSyBBS_DQuHtn0bY06aIUvWQszKkCO4-u3zQ",
+  authDomain: "naksimpan-f396c.firebaseapp.com",
+  projectId: "naksimpan-f396c",
+  storageBucket: "naksimpan-f396c.firebasestorage.app",
+  messagingSenderId: "279340482782",
+  appId: "1:279340482782:web:f8f88f9b02bfecc4b8c24f",
+  measurementId: "G-STDJZ3SNSB"));}
+  else{
+    await Firebase.initializeApp();
+  }
 
-    '/': (context) => Login(),
-    '/register': (context) => Register()
-    
-  },
-));
-
+  runApp(MaterialApp(
+    debugShowCheckedModeBanner: false,
+    initialRoute: '/',
+    routes: {
+      '/': (context) => Login(),
+      '/register': (context) => Register()
+    },
+  ));
+}
 class NakSimpanApp extends StatelessWidget {
   const NakSimpanApp({super.key});
 

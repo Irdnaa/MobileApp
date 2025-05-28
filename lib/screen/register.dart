@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:form_field_validator/form_field_validator.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'login.dart';
 
 class Register extends StatefulWidget {
-  const Register({Key? key}) : super(key: key);
+  const Register({super.key});
 
   @override
   State<Register> createState() => _RegisterState();
@@ -14,6 +15,9 @@ class _RegisterState extends State<Register> {
   final _formkey = GlobalKey<FormState>();
 
   String _password = '';
+  String _email = '';
+  String _name = '';
+  String _phone = '';
   bool _obscureText = true;
 
   @override
@@ -59,6 +63,7 @@ class _RegisterState extends State<Register> {
                             Padding(
                               padding: const EdgeInsets.all(12.0),
                               child: TextFormField(
+                                onChanged: (val) => _name = val,
                                 validator: MultiValidator([
                                   RequiredValidator(errorText: 'Enter name'),
                                   MinLengthValidator(3,
@@ -81,6 +86,7 @@ class _RegisterState extends State<Register> {
                             Padding(
                               padding: const EdgeInsets.all(8.0),
                               child: TextFormField(
+                                onChanged: (val) => _email = val,
                                 validator: MultiValidator([
                                   RequiredValidator(errorText: 'Enter email address'),
                                   EmailValidator(
@@ -102,6 +108,7 @@ class _RegisterState extends State<Register> {
                             Padding(
                               padding: const EdgeInsets.all(8.0),
                               child: TextFormField(
+                                onChanged: (val) => _phone = val,
                                 validator: ((value) {
                                   RegExp regex = RegExp(r'(^(?:[+0]9)?[0-9]{10}$)');
 
@@ -214,16 +221,25 @@ class _RegisterState extends State<Register> {
                                               borderRadius: BorderRadius.circular(30),
                                             )
                                           ),
-                                          onPressed: () {
+                                          onPressed: () async {
                                             if (_formkey.currentState!.validate()) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(content: Text('✅ Register successful!')),
-                                              );
-
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(builder: (_) => const Login()),
-                                              );
+                                              try {
+                                                await FirebaseAuth.instance.createUserWithEmailAndPassword(
+                                                  email: _email.trim(),
+                                                  password: _password.trim(),
+                                                );
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(content: Text('✅ Register successful!')),
+                                                );
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(builder: (_) => const Login()),
+                                                );
+                                              } on FirebaseAuthException catch (e) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(content: Text(e.message ?? 'Registration failed')),
+                                                );
+                                              }
                                             }
                                           },
                                           child: Text(
