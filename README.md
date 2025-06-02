@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # flutter_application_1
+=======
+# flutter_app
+>>>>>>> origin/main
 
 A new Flutter project.
 
