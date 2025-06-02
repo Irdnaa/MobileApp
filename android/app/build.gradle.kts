@@ -3,23 +3,13 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
-<<<<<<< HEAD
     id("com.google.gms.google-services")
 }
 
 android {
-    namespace = "com.example.flutter_application_1"
+    namespace = "com.example.flutter_application_1"  // You can set this to your package name
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
-=======
-    id("com.google.gms.google-services") 
-}
-
-android {
-    namespace = "com.example.flutter_app"
-    compileSdk = flutter.compileSdkVersion
->>>>>>> origin/main
-    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -31,18 +21,8 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-<<<<<<< HEAD
-        applicationId = "com.example.flutter_application_1"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        applicationId = "com.example.flutter_application_1"  // Ensure this matches your package name
         minSdk = flutter.minSdkVersion
-=======
-        applicationId = "com.example.flutter_app"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 23
->>>>>>> origin/main
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -60,7 +40,6 @@ android {
 flutter {
     source = "../.."
 }
-<<<<<<< HEAD
 
 dependencies {
     // Firebase BoM: manages compatible versions
@@ -73,9 +52,3 @@ dependencies {
     // implementation("com.google.firebase:firebase-auth")
     // implementation("com.google.firebase:firebase-firestore")
 }
-=======
-dependencies {
-    
-    implementation(platform("com.google.firebase:firebase-bom:33.14.0"))
-}
->>>>>>> origin/main
