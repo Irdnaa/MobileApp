@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/budgetmanagement.dart';
 import '../screen/login.dart';
 import 'personalization.dart';
+
+
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -52,6 +55,21 @@ class HomePage extends StatelessWidget {
                     );
                   },
                   child: const Text('Logout'),
+                ),
+              ),
+              SizedBox(
+                width: 250.0,
+                child: ElevatedButton(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text ('Expenses Added')),
+                    );
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => ExpenseHomePage()),
+                      );
+                  },
+                  child: const Text('Go to Expenses Management'),
                 ),
               )
             ]
