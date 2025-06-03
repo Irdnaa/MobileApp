@@ -1,30 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
-void main() => runApp(ExpenseApp());
+class ExpenseApp extends StatefulWidget {
+  const ExpenseApp({super.key});
 
-class ExpenseApp extends StatelessWidget {
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'NaKSimPan - Expenses',
-      theme: ThemeData(
-        primarySwatch: Colors.teal,
-        scaffoldBackgroundColor: Colors.lightBlue[50], // light blue background
-        textTheme: TextTheme(
-          bodyMedium: TextStyle(fontSize: 16, fontFamily: 'Arial'),
-        ),
-      ),
-      home: ExpenseHomePage(),
-    );
-  }
+  _ExpenseHomePageState createState() => _ExpenseHomePageState();
 }
 
 class Expense {
   String title;
   double amount;
-  DateTime date;
 
-  Expense({required this.title, required this.amount, required this.date});
+  Expense({required this.title, required this.amount});
+
+  factory Expense.fromJson(Map<String, dynamic> json) {
+    return Expense(
+      title: json['title'],
+      amount: json['amount'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'title': title,
+      'amount': amount,
+    };
+  }
 }
 
 class ExpenseHomePage extends StatefulWidget {
@@ -35,18 +38,42 @@ class ExpenseHomePage extends StatefulWidget {
 class _ExpenseHomePageState extends State<ExpenseHomePage> {
   List<Expense> _expenses = [];
 
+  @override
+  void initState() {
+    super.initState();
+    loadExpenseList();
+  }
+
   final _titleController = TextEditingController();
   final _amountController = TextEditingController();
 
-  void _addExpense() {
+  Future<void> saveExpenseList(List<Expense> expenses) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> jsonStringList = expenses.map((expense) => jsonEncode(expense.toJson())).toList();
+    await prefs.setStringList('expense_list', jsonStringList);
+  }
+
+  Future<void> loadExpenseList() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String>? jsonStringList = prefs.getStringList('expense_list');
+
+    if (jsonStringList != null) {
+      setState(() {
+        _expenses = jsonStringList.map((jsonString) => Expense.fromJson(jsonDecode(jsonString))).toList();
+      });
+    }
+  }
+
+  void _addExpense() async {
     String title = _titleController.text;
     double? amount = double.tryParse(_amountController.text);
 
     if (title.isEmpty || amount == null || amount <= 0) return;
 
-    setState(() {
-      _expenses.add(Expense(title: title, amount: amount, date: DateTime.now()));
-    });
+    _expenses.add(Expense(title: title, amount: amount));
+    await saveExpenseList(_expenses);
+
+    setState(() {});
 
     _titleController.clear();
     _amountController.clear();
@@ -54,13 +81,14 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     Navigator.of(context).pop();
   }
 
-  void _deleteExpense(int index) {
-    setState(() {
-      _expenses.removeAt(index);
-    });
+  void _deleteExpense(int index) async {
+    _expenses.removeAt(index);
+    await saveExpenseList(_expenses);
+
+    setState(() {});
   }
 
-  void _editExpense(int index) {
+  void _editExpense(int index) async {
     final expense = _expenses[index];
     _titleController.text = expense.title;
     _amountController.text = expense.amount.toString();
@@ -91,15 +119,16 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
                   backgroundColor: Colors.teal,
                 ),
                 child: Text('Save Changes'),
-                onPressed: () {
+                onPressed: () async {
                   String updatedTitle = _titleController.text;
                   double? updatedAmount = double.tryParse(_amountController.text);
 
                   if (updatedTitle.isEmpty || updatedAmount == null || updatedAmount <= 0) return;
 
-                  setState(() {
-                    _expenses[index] = Expense(title: updatedTitle, amount: updatedAmount, date: expense.date);
-                  });
+                  _expenses[index] = Expense(title: updatedTitle, amount: updatedAmount);
+                  await saveExpenseList(_expenses);
+
+                  setState(() {});
 
                   _titleController.clear();
                   _amountController.clear();
@@ -173,7 +202,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   child: ListTile(
                     title: Text(exp.title, style: TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('RM${exp.amount.toStringAsFixed(2)} on ${exp.date.toLocal().toString().split(' ')[0]}'),
+                    subtitle: Text('RM${exp.amount.toStringAsFixed(2)}'),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
