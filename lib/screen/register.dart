@@ -1,7 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:form_field_validator/form_field_validator.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'login.dart';
+import 'auth_service.dart';
 
 class Register extends StatefulWidget {
   const Register({super.key});
@@ -13,6 +15,7 @@ class Register extends StatefulWidget {
 class _RegisterState extends State<Register> {
   Map userData = {};
   final _formkey = GlobalKey<FormState>();
+  final authService = AuthService();
 
   String _password = '';
   String _email = '';
@@ -224,10 +227,15 @@ class _RegisterState extends State<Register> {
                                           onPressed: () async {
                                             if (_formkey.currentState!.validate()) {
                                               try {
-                                                await FirebaseAuth.instance.createUserWithEmailAndPassword(
-                                                  email: _email.trim(),
-                                                  password: _password.trim(),
-                                                );
+                                                authService.createAccount( _email, _password, _name, _phone);
+                                                await FirebaseFirestore.instance.collection('users').add({
+                                                'email': _email,
+                                                'name': _name,
+                                                'phone': _phone,
+                                                'uid': FirebaseAuth.instance.currentUser?.uid,
+                                                'timestamp': FieldValue.serverTimestamp(),
+                                                });
+
                                                 ScaffoldMessenger.of(context).showSnackBar(
                                                   SnackBar(content: Text('✅ Register successful!')),
                                                 );

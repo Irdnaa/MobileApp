@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import '../home/homepage.dart';
 import 'forgot_password.dart';
 import 'register.dart';
+import 'auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Login extends StatefulWidget {
   const Login({super.key});
 
@@ -14,6 +17,7 @@ class _LoginState extends State<Login> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final authService = AuthService();
 
   bool _obscureText = true;
 
@@ -24,11 +28,8 @@ Future<void> _firebaseLogin() async {
 
     try {
       // Try to sign in with Firebase Auth
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-
+      authService.signIn(email, password);
+     
       // If successful, navigate to HomePage
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('✅ Login successful!')),
@@ -48,28 +49,17 @@ Future<void> _firebaseLogin() async {
         SnackBar(content: Text(message)),
       );
     }
-if (email == 'user@example.com' && password == '123456') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('✅ Login successful!')),
-        );
+    if (email == 'user@example.com' && password == '123456') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('✅ Login successful!')),
+      );
 
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const HomePage()),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('❌ Invalid credentials')),
-        );
-      }
-    
-    
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const HomePage()),
+      );
+    }
   }
-  
- 
-
-      
-  
 }
 
   @override

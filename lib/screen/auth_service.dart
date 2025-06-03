@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 ValueNotifier<AuthService> authService = ValueNotifier<AuthService>(AuthService());
 class AuthService{
@@ -8,24 +9,28 @@ class AuthService{
  User? get currentUser => firebaseAuth.currentUser;
   Stream<User?> get userChanges => firebaseAuth.userChanges();
 
-  Future<UserCredential> signIn({
-    required String email,
-    required String password,
-  }) async {
-    return await firebaseAuth.signInWithEmailAndPassword(
+  Future signIn(String email, String password) async {
+    await firebaseAuth.signInWithEmailAndPassword(
       email: email,
       password: password,
     );
   }
-  Future<UserCredential> createAccount({
-    required String email,
-    required String password,
-  }) async {
-    return await firebaseAuth.createUserWithEmailAndPassword(
+
+  Future createAccount(String email, String password, String name, String phoneNumber) async {
+    final UserCredential userCredential = await firebaseAuth.createUserWithEmailAndPassword(
       email: email,
       password: password,
     );
   }
+
+  Future<void> addUserDetails(String name, String phone, String email) async {
+    await FirebaseFirestore.instance.collection('users').add({
+      'name': name,
+      'phone': phone,
+      'email': email,
+    });
+  }
+
   Future<void> signOut() async {
     return await firebaseAuth.signOut();
   }
