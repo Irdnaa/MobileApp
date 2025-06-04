@@ -6,6 +6,7 @@ import '../screen/login.dart';
 import 'personalization.dart';
 import '../screen/auth_service.dart';
 
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -13,43 +14,60 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
+class AppUser {
+  final String email;
+  final String name;
+  final String phone;
+
+  AppUser({required this.email, required this.name, required this.phone});
+
+  factory AppUser.fromMap(Map<String, dynamic> data) {
+    return AppUser(
+      email: data['email'] ?? '',
+      name: data['name'] ?? '',
+      phone: data['phone'] ?? '',
+    );
+  }
+}
+
 class _HomePageState extends State<HomePage> {
-  String? username;
+  AppUser? appUser;
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    fetchUsername();
+    fetchUser();
   }
 
-  Future<void> fetchUsername() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final email = user.email;
-      final query = await FirebaseFirestore.instance
-          .collection('users')
-          .where('email', isEqualTo: email)
-          .limit(1)
-          .get();
-      if (query.docs.isNotEmpty) {
-        setState(() {
-          username = query.docs.first['name'] ?? '';
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          username = null;
-          isLoading = false;
-        });
-      }
+  Future<void> fetchUser() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user != null) {
+    final email = user.email;
+    final query = await FirebaseFirestore.instance
+        .collection('users')
+        .where('email', isEqualTo: email)
+        .limit(1)
+        .get();
+    if (query.docs.isNotEmpty) {
+      final data = query.docs.first.data();
+      setState(() {
+        appUser = AppUser.fromMap(data);
+        isLoading = false;
+      });
     } else {
       setState(() {
-        username = null;
+        appUser = null;
         isLoading = false;
       });
     }
+  } else {
+    setState(() {
+      appUser = null;
+      isLoading = false;
+    });
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -67,9 +85,9 @@ class _HomePageState extends State<HomePage> {
                 child: isLoading
                     ? const CircularProgressIndicator()
                     : Text(
-                        (username == null || username!.isEmpty)
+                        (appUser == null || appUser!.name.isEmpty)
                             ? 'Hello'
-                            : 'Hello, $username',
+                            : 'Hello, ${appUser!.name}',
                         style: const TextStyle(
                             fontSize: 16, fontWeight: FontWeight.bold),
                       ),
@@ -79,10 +97,14 @@ class _HomePageState extends State<HomePage> {
               width: 250.0,
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => PersonalizationPage()),
-                  );
+                  if (appUser != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PersonalizationPage(user: appUser!),
+                      ),
+                    );
+                  }
                 },
                 child: const Text('Go to Personalization'),
               ),

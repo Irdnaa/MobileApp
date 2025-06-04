@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'homepage.dart';
 
 class PersonalizationPage extends StatefulWidget {
-  const PersonalizationPage({super.key});
+  final AppUser user;
+  const PersonalizationPage({super.key,required this.user});
 
   @override
   _PersonalizationPageState createState() => _PersonalizationPageState();
@@ -22,7 +24,14 @@ class _PersonalizationPageState extends State<PersonalizationPage> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          
           children: [
+
+            Text("Profile: ${widget.user.email}\nHello ${widget.user.name}\nHello ${widget.user.phone}",
+            
+           
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
             Text(
               "Customize your dashboard",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
