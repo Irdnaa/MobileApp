@@ -232,7 +232,7 @@ class _RegisterState extends State<Register> {
                                                 'email': _email,
                                                 'name': _name,
                                                 'phone': _phone,
-                                                'uid': FirebaseAuth.instance.currentUser?.uid,
+      
                                                 'timestamp': FieldValue.serverTimestamp(),
                                                 });
 
