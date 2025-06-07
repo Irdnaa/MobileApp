@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:uuid/uuid.dart';
+import 'login.dart';
 
 class ExpenseApp extends StatefulWidget {
   const ExpenseApp({super.key});
@@ -12,13 +16,16 @@ class ExpenseApp extends StatefulWidget {
 class Expense {
   String title;
   double amount;
+  String uuid;
 
-  Expense({required this.title, required this.amount});
+  Expense({required this.title, required this.amount, required this.uuid});
 
   factory Expense.fromJson(Map<String, dynamic> json) {
+    final data = json['expense_list'] as Map<String, dynamic>;
     return Expense(
-      title: json['title'],
-      amount: json['amount'],
+      title: data['title'] ?? '',
+      amount: (data['amount'] ?? 0).toDouble(),
+      uuid: data['uuid'] ?? '',
     );
   }
 
@@ -26,6 +33,7 @@ class Expense {
     return {
       'title': title,
       'amount': amount,
+      'uuid': uuid
     };
   }
 }
@@ -48,16 +56,37 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   final _amountController = TextEditingController();
 
   Future<void> saveExpenseList(List<Expense> expenses) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String> jsonStringList = expenses.map((expense) => jsonEncode(expense.toJson())).toList();
-    await prefs.setStringList('expense_list', jsonStringList);
+    if (FirebaseAuth.instance.currentUser != null) {
+      for (var expense in expenses) {
+        await FirebaseFirestore.instance.collection('expenses').doc(expense.uuid).set({
+          'expense_list': expense.toJson(),
+          'uid': FirebaseAuth.instance.currentUser?.uid,
+        });
+      }
+    } else {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      List<String> jsonStringList = expenses.map((expense) => jsonEncode(expense.toJson())).toList();
+      await prefs.setStringList('expense_list', jsonStringList);
+    }
   }
 
   Future<void> loadExpenseList() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     List<String>? jsonStringList = prefs.getStringList('expense_list');
+    String? uid = FirebaseAuth.instance.currentUser?.uid;
 
-    if (jsonStringList != null) {
+    if (uid != null) {
+      QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('expenses').where('uid', isEqualTo: uid).get();
+
+      List<Expense> firebaseExpenses = snapshot.docs.map((doc) => Expense.fromJson(doc.data() as Map<String, dynamic>)).toList();
+
+      setState(() {
+        _expenses = firebaseExpenses;
+      });
+
+      // List<String> jsonStringList = firebaseExpenses.map((e) => jsonEncode(e.toJson())).toList();
+      // await prefs.setStringList('expense_list', jsonStringList);
+    } else if (jsonStringList != null) {
       setState(() {
         _expenses = jsonStringList.map((jsonString) => Expense.fromJson(jsonDecode(jsonString))).toList();
       });
@@ -67,10 +96,12 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   void _addExpense() async {
     String title = _titleController.text;
     double? amount = double.tryParse(_amountController.text);
+    String uuid = Uuid().v4();
 
     if (title.isEmpty || amount == null || amount <= 0) return;
 
-    _expenses.add(Expense(title: title, amount: amount));
+    _expenses.clear();
+    _expenses.add(Expense(title: title, amount: amount, uuid: uuid));
     await saveExpenseList(_expenses);
 
     setState(() {});
@@ -125,7 +156,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
 
                   if (updatedTitle.isEmpty || updatedAmount == null || updatedAmount <= 0) return;
 
-                  _expenses[index] = Expense(title: updatedTitle, amount: updatedAmount);
+                  _expenses[index] = Expense(title: updatedTitle, amount: updatedAmount, uuid: expense.uuid);
                   await saveExpenseList(_expenses);
 
                   setState(() {});
@@ -191,7 +222,43 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
         ],
       ),
       body: _expenses.isEmpty
-          ? Center(child: Text('No expenses added yet!', style: TextStyle(fontSize: 18)))
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('No expenses added yet!',style: TextStyle(fontSize: 18)),
+                  SizedBox(height: 10,),
+                  if (FirebaseAuth.instance.currentUser == null)
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const Login()),
+                        );
+                      },
+                      child: Text.rich(
+                        TextSpan(
+                          text: 'Log in',
+                          style: TextStyle(
+                            color: Colors.blue,
+                            decoration: TextDecoration.underline,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: ' to load expense from cloud',
+                              style: TextStyle(
+                                fontWeight: FontWeight.normal,
+                                decoration: TextDecoration.none,
+                              )
+                            )
+                          ]
+                        )
+                      ),
+                    )
+                ],
+              )
+            )
           : ListView.builder(
               itemCount: _expenses.length,
               itemBuilder: (ctx, index) {

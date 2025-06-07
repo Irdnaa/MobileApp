@@ -4,7 +4,6 @@ import 'forgot_password.dart';
 import 'register.dart';
 import 'auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -29,7 +28,7 @@ Future<void> _firebaseLogin() async {
     try {
       // Try to sign in with Firebase Auth
       authService.signIn(email, password);
-     
+
       // If successful, navigate to HomePage
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('✅ Login successful!')),
@@ -38,7 +37,7 @@ Future<void> _firebaseLogin() async {
         context,
         MaterialPageRoute(builder: (_) => const HomePage()),
       );
-    } 
+    }
     on FirebaseAuthException catch (e) {
       // Handle Firebase Auth errors
       String message = '❌ not registered';
@@ -176,6 +175,31 @@ Future<void> _firebaseLogin() async {
                           ),
                         ),
                       ),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('✅ Logged in as Guest')),
+                            );
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const HomePage()),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xFF4facfe),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            'Guest',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 15),
                       Text(
                         'Demo Login:\nuser@example.com / 123456',
@@ -185,7 +209,6 @@ Future<void> _firebaseLogin() async {
                       const SizedBox(height: 20),
                       GestureDetector(
                         onTap: () {
-
                           Navigator.push(
                             context,
                             MaterialPageRoute(builder: (_) => const Register()),
