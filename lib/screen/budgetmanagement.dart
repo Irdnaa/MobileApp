@@ -1,42 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:uuid/uuid.dart';
+import '../model/expense.dart';
+import '../service/budget_service.dart';
+import 'loading_dialog.dart';
 import 'login.dart';
-
-class ExpenseApp extends StatefulWidget {
-  const ExpenseApp({super.key});
-
-  @override
-  _ExpenseHomePageState createState() => _ExpenseHomePageState();
-}
-
-class Expense {
-  String title;
-  double amount;
-  String uuid;
-
-  Expense({required this.title, required this.amount, required this.uuid});
-
-  factory Expense.fromJson(Map<String, dynamic> json) {
-    final data = json['expense_list'] as Map<String, dynamic>;
-    return Expense(
-      title: data['title'] ?? '',
-      amount: (data['amount'] ?? 0).toDouble(),
-      uuid: data['uuid'] ?? '',
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'title': title,
-      'amount': amount,
-      'uuid': uuid
-    };
-  }
-}
 
 class ExpenseHomePage extends StatefulWidget {
   @override
@@ -44,53 +13,40 @@ class ExpenseHomePage extends StatefulWidget {
 }
 
 class _ExpenseHomePageState extends State<ExpenseHomePage> {
+  late BudgetService _budgetService;
   List<Expense> _expenses = [];
+  double _budget = 0.0;
 
   @override
   void initState() {
     super.initState();
-    loadExpenseList();
+    _budgetService = BudgetService(
+      auth: FirebaseAuth.instance,
+      firestore: FirebaseFirestore.instance,
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await Future.delayed(Duration(milliseconds: 500));
+      await _loadExpenses();
+      await _loadBudget();
+      LoadingDialog.hide(context);
+    });
   }
 
   final _titleController = TextEditingController();
   final _amountController = TextEditingController();
 
-  Future<void> saveExpenseList(List<Expense> expenses) async {
-    if (FirebaseAuth.instance.currentUser != null) {
-      for (var expense in expenses) {
-        await FirebaseFirestore.instance.collection('expenses').doc(expense.uuid).set({
-          'expense_list': expense.toJson(),
-          'uid': FirebaseAuth.instance.currentUser?.uid,
-        });
-      }
-    } else {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      List<String> jsonStringList = expenses.map((expense) => jsonEncode(expense.toJson())).toList();
-      await prefs.setStringList('expense_list', jsonStringList);
-    }
+  Future<void> _loadBudget() async {
+    double loaded = await _budgetService.loadBudget();
+    setState(() {
+      _budget = loaded;
+    });
   }
 
-  Future<void> loadExpenseList() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String>? jsonStringList = prefs.getStringList('expense_list');
-    String? uid = FirebaseAuth.instance.currentUser?.uid;
-
-    if (uid != null) {
-      QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('expenses').where('uid', isEqualTo: uid).get();
-
-      List<Expense> firebaseExpenses = snapshot.docs.map((doc) => Expense.fromJson(doc.data() as Map<String, dynamic>)).toList();
-
-      setState(() {
-        _expenses = firebaseExpenses;
-      });
-
-      // List<String> jsonStringList = firebaseExpenses.map((e) => jsonEncode(e.toJson())).toList();
-      // await prefs.setStringList('expense_list', jsonStringList);
-    } else if (jsonStringList != null) {
-      setState(() {
-        _expenses = jsonStringList.map((jsonString) => Expense.fromJson(jsonDecode(jsonString))).toList();
-      });
-    }
+  Future<void> _loadExpenses() async {
+    List<Expense> loaded = await _budgetService.loadExpenseList();
+    setState(() {
+      _expenses = loaded;
+    });
   }
 
   void _addExpense() async {
@@ -102,7 +58,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
 
     _expenses.clear();
     _expenses.add(Expense(title: title, amount: amount, uuid: uuid));
-    await saveExpenseList(_expenses);
+    await _budgetService.saveExpenseList(_expenses);
 
     setState(() {});
 
@@ -112,9 +68,18 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     Navigator.of(context).pop();
   }
 
-  void _deleteExpense(int index) async {
+  void _deleteExpense(List<Expense> expenses, int index) async {
+    var uuid = expenses[index].uuid;
+
+    if (FirebaseAuth.instance.currentUser != null) {
+      QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('expenses').where('expense_list.uuid', isEqualTo: uuid).get();
+      for (var doc in snapshot.docs) {
+        await doc.reference.delete();
+      }
+    }
+
     _expenses.removeAt(index);
-    await saveExpenseList(_expenses);
+    await _budgetService.saveExpenseList(_expenses);
 
     setState(() {});
   }
@@ -157,7 +122,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
                   if (updatedTitle.isEmpty || updatedAmount == null || updatedAmount <= 0) return;
 
                   _expenses[index] = Expense(title: updatedTitle, amount: updatedAmount, uuid: expense.uuid);
-                  await saveExpenseList(_expenses);
+                  await _budgetService.saveExpenseList(_expenses);
 
                   setState(() {});
 
@@ -209,11 +174,49 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     );
   }
 
+  void _showBudgetEditDialog() {
+    final TextEditingController _budgetController =
+    TextEditingController(text: _budget.toString());
+
+    showDialog(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          title: Text('Edit Budget'),
+          content: TextField(
+            controller: _budgetController,
+            decoration: InputDecoration(labelText: 'Total Budget'),
+            keyboardType: TextInputType.numberWithOptions(decimal: true),
+          ),
+          actions: [
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            ElevatedButton(
+              child: Text('Save'),
+              onPressed: () async {
+                double? newBudget = double.tryParse(_budgetController.text);
+                if (newBudget != null && newBudget >= 0) {
+                  await _budgetService.saveBudget(newBudget);
+                  setState(() {
+                    _budget = newBudget;
+                  });
+                }
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('NaKSimPan - Expenses'),
+        title: Text('Expenses'),
         actions: [
           IconButton(
             icon: Icon(Icons.add),
@@ -221,13 +224,39 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
           ),
         ],
       ),
-      body: _expenses.isEmpty
-          ? Center(
+      body: Column(
+        children: [
+          GestureDetector(
+            onTap: _showBudgetEditDialog,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  Text('Your Budget', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  SizedBox(height: 4),
+                  Text(
+                    'RM${(_budget - _expenses.fold(0, (sum, item) => sum + item.amount)).toStringAsFixed(2)}',
+                    style: TextStyle(fontSize: 24, color: Colors.teal),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Total Budget: RM${_budget.toStringAsFixed(2)}',
+                    style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Divider(thickness: 1),
+
+          Expanded(
+            child: _expenses.isEmpty
+                ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('No expenses added yet!',style: TextStyle(fontSize: 18)),
-                  SizedBox(height: 10,),
+                  Text('No expenses added yet!', style: TextStyle(fontSize: 18)),
+                  SizedBox(height: 10),
                   if (FirebaseAuth.instance.currentUser == null)
                     GestureDetector(
                       onTap: () {
@@ -250,16 +279,16 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
                               style: TextStyle(
                                 fontWeight: FontWeight.normal,
                                 decoration: TextDecoration.none,
-                              )
+                              ),
                             )
-                          ]
-                        )
+                          ],
+                        ),
                       ),
                     )
                 ],
-              )
+              ),
             )
-          : ListView.builder(
+                : ListView.builder(
               itemCount: _expenses.length,
               itemBuilder: (ctx, index) {
                 final exp = _expenses[index];
@@ -274,13 +303,16 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(icon: Icon(Icons.edit, color: Colors.orange), onPressed: () => _editExpense(index)),
-                        IconButton(icon: Icon(Icons.delete, color: Colors.red), onPressed: () => _deleteExpense(index)),
+                        IconButton(icon: Icon(Icons.delete, color: Colors.red), onPressed: () => _deleteExpense(_expenses, index)),
                       ],
                     ),
                   ),
                 );
               },
             ),
+          ),
+        ],
+      ),
     );
   }
 }

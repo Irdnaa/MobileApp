@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/screen/budgetmanagement.dart';
+import '../screen/auth_service.dart';
+import '../screen/loading_dialog.dart';
 import '../screen/login.dart';
 import 'personalization.dart';
 
@@ -16,6 +18,17 @@ class HomePage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Home Page'),
+          actions: [
+            IconButton(
+              icon: Icon(Icons.menu),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => PersonalizationPage()),
+                );
+              },
+            ),
+          ],
         centerTitle: true
       ),
       body: Center(
@@ -46,6 +59,7 @@ class HomePage extends StatelessWidget {
                 width: 250.0,
                 child: ElevatedButton(
                   onPressed: () {
+                    AuthService().signOut();
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('✅ Logout successful!')),
                     );
@@ -64,7 +78,8 @@ class HomePage extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => ExpenseHomePage()),
-                      );
+                    );
+                    LoadingDialog.show(context, message: 'Loading...');
                   },
                   child: const Text('Go to Expenses Management'),
                 ),

@@ -48,16 +48,6 @@ Future<void> _firebaseLogin() async {
         SnackBar(content: Text(message)),
       );
     }
-    if (email == 'user@example.com' && password == '123456') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('✅ Login successful!')),
-      );
-
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const HomePage()),
-      );
-    }
   }
 }
 
@@ -88,7 +78,7 @@ Future<void> _firebaseLogin() async {
                   child: Column(
                     children: [
                       Text(
-                        'Welcome Back!',
+                        'NAK SIMPAN?',
                         style: TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.bold,
@@ -97,7 +87,7 @@ Future<void> _firebaseLogin() async {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        'Login to continue your journey',
+                        'Login to save smarter',
                         style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                       ),
                       const SizedBox(height: 30),
@@ -160,7 +150,6 @@ Future<void> _firebaseLogin() async {
                       const SizedBox(height: 20),
                       SizedBox(
                         width: double.infinity,
-                        height: 50,
                         child: ElevatedButton(
                           onPressed: _firebaseLogin,
                           style: ElevatedButton.styleFrom(
@@ -177,7 +166,6 @@ Future<void> _firebaseLogin() async {
                       ),
                       SizedBox(
                         width: double.infinity,
-                        height: 50,
                         child: ElevatedButton(
                           onPressed: () {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -195,16 +183,10 @@ Future<void> _firebaseLogin() async {
                             ),
                           ),
                           child: Text(
-                            'Guest',
+                            'GUEST',
                             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 15),
-                      Text(
-                        'Demo Login:\nuser@example.com / 123456',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
                       ),
                       const SizedBox(height: 20),
                       GestureDetector(
