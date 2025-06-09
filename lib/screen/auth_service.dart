@@ -9,22 +9,27 @@ class AuthService{
  User? get currentUser => firebaseAuth.currentUser;
   Stream<User?> get userChanges => firebaseAuth.userChanges();
 
-  Future signIn(String email, String password) async {
-    await firebaseAuth.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
+  Future<bool> signIn(String email, String password) async {
+    try {
+      await firebaseAuth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
-  Future createAccount(String email, String password, String name, String phoneNumber) async {
-    final UserCredential userCredential = await firebaseAuth.createUserWithEmailAndPassword(
+  Future createAccount(String email, String password) async {
+     await firebaseAuth.createUserWithEmailAndPassword(
       email: email,
       password: password,
     );
   }
 
   Future<void> addUserDetails(String name, String phone, String email) async {
-    await FirebaseFirestore.instance.collection('users').add({
+    await FirebaseFirestore.instance.collection('users').doc(email).set({
       'name': name,
       'phone': phone,
       'email': email,

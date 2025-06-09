@@ -18,127 +18,126 @@ class AppUser {
   final String email;
   final String name;
   final String phone;
+  final String uid;
 
-  AppUser({required this.email, required this.name, required this.phone});
+  AppUser({required this.email, required this.name, required this.phone, required this.uid});
 
   factory AppUser.fromMap(Map<String, dynamic> data) {
     return AppUser(
       email: data['email'] ?? '',
       name: data['name'] ?? '',
       phone: data['phone'] ?? '',
+      uid: data['uid'] ?? '',
     );
   }
 }
 
 class _HomePageState extends State<HomePage> {
-  AppUser? appUser;
-  bool isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    fetchUser();
-  }
-
-  Future<void> fetchUser() async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user != null) {
-    final email = user.email;
-    final query = await FirebaseFirestore.instance
-        .collection('users')
-        .where('email', isEqualTo: email)
-        .limit(1)
-        .get();
-    if (query.docs.isNotEmpty) {
-      final data = query.docs.first.data();
-      setState(() {
-        appUser = AppUser.fromMap(data);
-        isLoading = false;
-      });
-    } else {
-      setState(() {
-        appUser = null;
-        isLoading = false;
-      });
-    }
-  } else {
-    setState(() {
-      appUser = null;
-      isLoading = false;
-    });
-  }
-}
-
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final uid =user?.uid;
+    if (user == null) {
+      return Scaffold(
+        body: Center(child: Text('No user logged in')),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Home Page'),
         centerTitle: true,
       ),
-      body: Center(
-        child: Column(
-          children: [
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(25.0),
-                child: isLoading
-                    ? const CircularProgressIndicator()
-                    : Text(
-                        (appUser == null || appUser!.name.isEmpty)
-                            ? 'Hello'
-                            : 'Hello, ${appUser!.name}',
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-              ),
+      body: StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: user.email)
+          .limit(1)
+          .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            print(user.email);
+            return const Center(child: Text('User not found.'));
+          }
+          final data = snapshot.data!.docs.first.data() as Map<String, dynamic>;
+          final appUser = AppUser.fromMap(data);
+
+          return Center(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(25.0),
+                  child: Text(
+                    (appUser.name.isEmpty)
+                        ? 'Hello'
+                        : 'Hello, ${appUser.name}',
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                Card(
+                  margin: EdgeInsets.only(bottom: 16),
+                  child: ListTile(
+                    title: Text('User Information'),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Email: ${appUser.email}'),
+                        Text('Name: ${appUser.name}'),
+                        Text('Phone: ${appUser.phone}'),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 250.0,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PersonalizationPage(user: appUser),
+                        ),
+                      );
+                    },
+                    child: const Text('Go to Personalization'),
+                  ),
+                ),
+                SizedBox(
+                  width: 250.0,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      AuthService().signOut();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('✅ Logout successful!')),
+                      );
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => Login()),
+                      );
+                    },
+                    child: const Text('Logout'),
+                  ),
+                ),
+                SizedBox(
+                  width: 250.0,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => ExpenseHomePage()),
+                      );
+                    },
+                    child: const Text('Go to Expenses Management'),
+                  ),
+                ),
+              ],
             ),
-            SizedBox(
-              width: 250.0,
-              child: ElevatedButton(
-                onPressed: () {
-                  if (appUser != null) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => PersonalizationPage(user: appUser!),
-                      ),
-                    );
-                  }
-                },
-                child: const Text('Go to Personalization'),
-              ),
-            ),
-            SizedBox(
-              width: 250.0,
-              child: ElevatedButton(
-                onPressed: () {
-                  AuthService().signOut();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('✅ Logout successful!')),
-                  );
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => Login()),
-                  );
-                },
-                child: const Text('Logout'),
-              ),
-            ),
-            SizedBox(
-              width: 250.0,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => ExpenseHomePage()),
-                  );
-                },
-                child: const Text('Go to Expenses Management'),
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
