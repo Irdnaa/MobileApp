@@ -19,8 +19,15 @@ class AppUser {
   final String name;
   final String phone;
   final String uid;
+  final String? profileImageDocId;
 
-  AppUser({required this.email, required this.name, required this.phone, required this.uid});
+  AppUser({
+    required this.email,
+    required this.name,
+    required this.phone,
+    required this.uid,
+    this.profileImageDocId,
+  });
 
   factory AppUser.fromMap(Map<String, dynamic> data) {
     return AppUser(
@@ -28,6 +35,7 @@ class AppUser {
       name: data['name'] ?? '',
       phone: data['phone'] ?? '',
       uid: data['uid'] ?? '',
+      profileImageDocId: data['profileImageDocId'],
     );
   }
 }
@@ -36,7 +44,6 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    final uid =user?.uid;
     if (user == null) {
       return Scaffold(
         body: Center(child: Text('No user logged in')),
@@ -78,20 +85,7 @@ class _HomePageState extends State<HomePage> {
                         fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
-                Card(
-                  margin: EdgeInsets.only(bottom: 16),
-                  child: ListTile(
-                    title: Text('User Information'),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Email: ${appUser.email}'),
-                        Text('Name: ${appUser.name}'),
-                        Text('Phone: ${appUser.phone}'),
-                      ],
-                    ),
-                  ),
-                ),
+                
                 SizedBox(
                   width: 250.0,
                   child: ElevatedButton(
