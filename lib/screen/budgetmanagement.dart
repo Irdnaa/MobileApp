@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:uuid/uuid.dart';
 import '../model/expense.dart';
 import '../service/budget_service.dart';
-import 'loading_dialog.dart';
+import '../service/currency_input.dart';
 import 'login.dart';
 
 class ExpenseHomePage extends StatefulWidget {
@@ -16,6 +16,9 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   late BudgetService _budgetService;
   List<Expense> _expenses = [];
   double _budget = 0.0;
+  bool _exceeded = false;
+
+  double get _dailyBudget => _budget / 30;
 
   @override
   void initState() {
@@ -24,12 +27,8 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       auth: FirebaseAuth.instance,
       firestore: FirebaseFirestore.instance,
     );
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await Future.delayed(Duration(milliseconds: 500));
-      await _loadExpenses();
-      await _loadBudget();
-      LoadingDialog.hide(context);
-    });
+    _loadExpenses();
+    _loadBudget();
   }
 
   final _titleController = TextEditingController();
@@ -42,6 +41,34 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     });
   }
 
+  void _showDailyBudgetExceededDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Budget Alert'),
+        content: Text('You have exceeded your daily budget of RM${_dailyBudget.toStringAsFixed(2)}.'),
+        actions: [
+          TextButton(
+            child: Text('OK'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  double get _todayExpenseTotal {
+    final now = DateTime.now();
+    return _expenses
+        .where((e) {
+      final timestamp = e.timestamp; // You'll need to add this field
+      return timestamp.year == now.year &&
+          timestamp.month == now.month &&
+          timestamp.day == now.day;
+    })
+        .fold(0.0, (sum, e) => sum + e.amount);
+  }
+
   Future<void> _loadExpenses() async {
     List<Expense> loaded = await _budgetService.loadExpenseList();
     setState(() {
@@ -50,15 +77,19 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   }
 
   void _addExpense() async {
+    List<Expense> newExpenses = [];
     String title = _titleController.text;
-    double? amount = double.tryParse(_amountController.text);
+    String rawAmount = _amountController.text.replaceAll(',', '');
+    double? amount = double.tryParse(rawAmount);
     String uuid = Uuid().v4();
+    DateTime timestamp = DateTime.now();
 
     if (title.isEmpty || amount == null || amount <= 0) return;
 
-    _expenses.clear();
-    _expenses.add(Expense(title: title, amount: amount, uuid: uuid));
-    await _budgetService.saveExpenseList(_expenses);
+    _expenses.add(Expense(title: title, amount: amount, uuid: uuid, timestamp: timestamp));
+    newExpenses.clear();
+    newExpenses.add(Expense(title: title, amount: amount, uuid: uuid, timestamp: timestamp));
+    await _budgetService.saveExpenseList(newExpenses);
 
     setState(() {});
 
@@ -66,6 +97,14 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     _amountController.clear();
 
     Navigator.of(context).pop();
+
+    if (_exceeded == false) {
+      if (_todayExpenseTotal > _dailyBudget) {
+        _exceeded = true;
+        setState(() {});
+        _showDailyBudgetExceededDialog();
+      }
+    }
   }
 
   void _deleteExpense(List<Expense> expenses, int index) async {
@@ -81,13 +120,19 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     _expenses.removeAt(index);
     await _budgetService.saveExpenseList(_expenses);
 
+    if (_exceeded == true) {
+      if (_todayExpenseTotal < _dailyBudget) {
+        _exceeded = false;
+      }
+    }
+
     setState(() {});
   }
 
   void _editExpense(int index) async {
     final expense = _expenses[index];
     _titleController.text = expense.title;
-    _amountController.text = expense.amount.toString();
+    _amountController.text = expense.amount.toStringAsFixed(2);
 
     showModalBottomSheet(
       context: context,
@@ -107,6 +152,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
                 controller: _amountController,
                 decoration: InputDecoration(labelText: 'Amount'),
                 keyboardType: TextInputType.number,
+                inputFormatters: [CurrencyInputFormatter()],
               ),
               SizedBox(height: 10),
               ElevatedButton(
@@ -117,11 +163,12 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
                 child: Text('Save Changes'),
                 onPressed: () async {
                   String updatedTitle = _titleController.text;
-                  double? updatedAmount = double.tryParse(_amountController.text);
+                  final raw = _amountController.text.replaceAll(',', '');
+                  double? updatedAmount = double.tryParse(raw);
 
                   if (updatedTitle.isEmpty || updatedAmount == null || updatedAmount <= 0) return;
 
-                  _expenses[index] = Expense(title: updatedTitle, amount: updatedAmount, uuid: expense.uuid);
+                  _expenses[index] = Expense(title: updatedTitle, amount: updatedAmount, uuid: expense.uuid, timestamp: expense.timestamp);
                   await _budgetService.saveExpenseList(_expenses);
 
                   setState(() {});
@@ -146,17 +193,19 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text('Add New Expense', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               SizedBox(height: 10),
               TextField(
                 controller: _titleController,
-                decoration: InputDecoration(labelText: 'Title'),
+                decoration: InputDecoration(labelText: 'Expense'),
               ),
               TextField(
                 controller: _amountController,
                 decoration: InputDecoration(labelText: 'Amount'),
                 keyboardType: TextInputType.number,
+                inputFormatters: [CurrencyInputFormatter()],
               ),
               SizedBox(height: 10),
               ElevatedButton(
@@ -164,8 +213,8 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
                   padding: EdgeInsets.all(12),
                   backgroundColor: Colors.teal,
                 ),
-                child: Text('Add Expense'),
                 onPressed: _addExpense,
+                child: Text('Add Expense'),
               ),
             ],
           ),
@@ -175,8 +224,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   }
 
   void _showBudgetEditDialog() {
-    final TextEditingController _budgetController =
-    TextEditingController(text: _budget.toString());
+    final TextEditingController _budgetController = TextEditingController(text: _budget.toStringAsFixed(2));
 
     showDialog(
       context: context,
@@ -185,8 +233,9 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
           title: Text('Edit Budget'),
           content: TextField(
             controller: _budgetController,
+            inputFormatters: [CurrencyInputFormatter()],
             decoration: InputDecoration(labelText: 'Total Budget'),
-            keyboardType: TextInputType.numberWithOptions(decimal: true),
+            keyboardType: TextInputType.number,
           ),
           actions: [
             TextButton(
@@ -196,7 +245,8 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
             ElevatedButton(
               child: Text('Save'),
               onPressed: () async {
-                double? newBudget = double.tryParse(_budgetController.text);
+                final raw = _budgetController.text.replaceAll(',', '');
+                double? newBudget = double.tryParse(raw);
                 if (newBudget != null && newBudget >= 0) {
                   await _budgetService.saveBudget(newBudget);
                   setState(() {
@@ -234,11 +284,25 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
                 children: [
                   Text('Your Budget', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   SizedBox(height: 4),
-                  Text(
-                    'RM${(_budget - _expenses.fold(0, (sum, item) => sum + item.amount)).toStringAsFixed(2)}',
-                    style: TextStyle(fontSize: 24, color: Colors.teal),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'RM${(_budget - _expenses.fold(0, (sum, item) => sum + item.amount)).toStringAsFixed(2)}',
+                        style: TextStyle(fontSize: 24, color: Colors.teal),
+                      ),
+                      SizedBox(width: 6),
+                      Icon(Icons.edit, size: 20, color: Colors.teal),
+                    ],
                   ),
                   SizedBox(height: 4),
+                  Text(
+                    'Daily Budget: RM${(_dailyBudget - _expenses.fold(0, (sum, item) => sum + item.amount)).toStringAsFixed(2)}',
+                    style: _exceeded
+                      ? TextStyle(fontSize: 14, color: Colors.red)
+                      : TextStyle(fontSize: 14, color: Colors.grey[600])
+                  ),
                   Text(
                     'Total Budget: RM${_budget.toStringAsFixed(2)}',
                     style: TextStyle(fontSize: 16, color: Colors.grey[700]),

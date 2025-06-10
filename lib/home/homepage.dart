@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/screen/budgetmanagement.dart';
 import '../screen/auth_service.dart';
-import '../screen/loading_dialog.dart';
 import '../screen/login.dart';
 import 'personalization.dart';
 
@@ -79,7 +78,6 @@ class HomePage extends StatelessWidget {
                       context,
                       MaterialPageRoute(builder: (_) => ExpenseHomePage()),
                     );
-                    LoadingDialog.show(context, message: 'Loading...');
                   },
                   child: const Text('Go to Expenses Management'),
                 ),
