@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/screen/register.dart';
 import 'package:flutter_app/screen/login.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
 
 
 void main() async {
@@ -19,6 +19,8 @@ void main() async {
   else{
     await Firebase.initializeApp();
   }
+
+  await FirebaseAuth.instance.signOut();
 
   runApp(MaterialApp(
     debugShowCheckedModeBanner: false,

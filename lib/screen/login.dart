@@ -26,11 +26,8 @@ Future<void> _firebaseLogin() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    try {
-      // Try to sign in with Firebase Auth
-      authService.signIn(email, password);
-     
-      // If successful, navigate to HomePage
+    bool success = await authService.signIn(email, password);
+    if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('✅ Login successful!')),
       );
@@ -38,25 +35,9 @@ Future<void> _firebaseLogin() async {
         context,
         MaterialPageRoute(builder: (_) => const HomePage()),
       );
-    } 
-    on FirebaseAuthException catch (e) {
-      // Handle Firebase Auth errors
-      String message = '❌ not registered';
-      if (e.code == 'user-not-found' || e.code == 'wrong-password') {
-        message = '❌ Invalid email or password';
-      }
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
-    }
-    if (email == 'user@example.com' && password == '123456') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('✅ Login successful!')),
-      );
-
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const HomePage()),
+        SnackBar(content: Text('❌ Invalid email or password')),
       );
     }
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'auth_service.dart';
 
 class ForgotPassword extends StatefulWidget {
   const ForgotPassword({super.key});
@@ -13,7 +14,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
   String _statusMessage = '';
   bool _isLoading = false;
 
-  void _sendMockResetEmail() async {
+  void _sendResetEmail() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
@@ -22,6 +23,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
     });
 
     await Future.delayed(const Duration(seconds: 2));
+    AuthService().sendPasswordResetEmail(_emailController.text.trim());
 
     setState(() {
       _isLoading = false;
@@ -94,7 +96,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                         width: double.infinity,
                         height: 50,
                         child: ElevatedButton(
-                          onPressed: _isLoading ? null : _sendMockResetEmail,
+                          onPressed: _isLoading ? null : _sendResetEmail,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF4facfe),
                             shape: RoundedRectangleBorder(

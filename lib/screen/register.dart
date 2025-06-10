@@ -4,6 +4,7 @@ import 'package:form_field_validator/form_field_validator.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'login.dart';
 import 'auth_service.dart';
+import 'package:uuid/uuid.dart';
 
 class Register extends StatefulWidget {
   const Register({super.key});
@@ -227,12 +228,13 @@ class _RegisterState extends State<Register> {
                                           onPressed: () async {
                                             if (_formkey.currentState!.validate()) {
                                               try {
-                                                authService.createAccount( _email, _password, _name, _phone);
-                                                await FirebaseFirestore.instance.collection('users').add({
+                                                authService.createAccount( _email, _password);
+                                                String uid = Uuid().v4();
+                                                await FirebaseFirestore.instance.collection('users').doc(uid).set({
                                                 'email': _email,
                                                 'name': _name,
                                                 'phone': _phone,
-                                                'uid': FirebaseAuth.instance.currentUser?.uid,
+                                                'uid': uid,
                                                 'timestamp': FieldValue.serverTimestamp(),
                                                 });
 
