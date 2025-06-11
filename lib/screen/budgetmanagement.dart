@@ -298,7 +298,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    'Daily Budget: RM${(_dailyBudget - _expenses.fold(0, (sum, item) => sum + item.amount)).toStringAsFixed(2)}',
+                    'Daily Budget: RM${(_dailyBudget - _todayExpenseTotal).toStringAsFixed(2)}',
                     style: _exceeded
                       ? TextStyle(fontSize: 14, color: Colors.red)
                       : TextStyle(fontSize: 14, color: Colors.grey[600])
