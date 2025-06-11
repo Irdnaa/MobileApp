@@ -39,8 +39,18 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     setState(() {
       _budget = loaded;
     });
+    _checkExceeded();
   }
 
+  void _checkExceeded() {
+    if (_todayExpenseTotal > _dailyBudget) {
+      _exceeded = true;
+    } else {
+      _exceeded = false;
+    }
+    setState(() {});
+  }
+  
   void _showDailyBudgetExceededDialog() {
     showDialog(
       context: context,
@@ -74,6 +84,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     setState(() {
       _expenses = loaded;
     });
+    _checkExceeded();
   }
 
   void _addExpense() async {
