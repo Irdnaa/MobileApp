@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_app/screen/budgetmanagement.dart';
+import '../screen/auth_service.dart';
 import '../screen/login.dart';
 import 'personalization.dart';
 import '../screen/auth_service.dart';

@@ -4,7 +4,6 @@ import 'forgot_password.dart';
 import 'register.dart';
 import 'auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -70,7 +69,7 @@ Future<void> _firebaseLogin() async {
                   child: Column(
                     children: [
                       Text(
-                        'Welcome Back!',
+                        'NAK SIMPAN?',
                         style: TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.bold,
@@ -79,7 +78,7 @@ Future<void> _firebaseLogin() async {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        'Login to continue your journey',
+                        'Login to save smarter',
                         style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                       ),
                       const SizedBox(height: 30),
@@ -142,7 +141,6 @@ Future<void> _firebaseLogin() async {
                       const SizedBox(height: 20),
                       SizedBox(
                         width: double.infinity,
-                        height: 50,
                         child: ElevatedButton(
                           onPressed: _firebaseLogin,
                           style: ElevatedButton.styleFrom(
@@ -157,16 +155,33 @@ Future<void> _firebaseLogin() async {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 15),
-                      Text(
-                        'Demo Login:\nuser@example.com / 123456',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('✅ Logged in as Guest')),
+                            );
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const HomePage()),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xFF4facfe),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            'GUEST',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 20),
                       GestureDetector(
                         onTap: () {
-
                           Navigator.push(
                             context,
                             MaterialPageRoute(builder: (_) => const Register()),
