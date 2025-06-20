@@ -7,6 +7,7 @@ import 'package:form_field_validator/form_field_validator.dart';
 import '../service/utils.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+import '../model/app_user.dart';
 
 String? profileImageUrl;
 
@@ -75,36 +76,6 @@ class _PersonalizationPageState extends State<PersonalizationPage> {
     print('3');
     return null;
   }
-
-// Future<void> uploadProfileImage(File imageFile) async {
-//   final user = widget.user;
-//   final storageRef = FirebaseStorage.instance
-//       .ref()
-//       .child('profile_pictures')
-//       .child('${user.uid}.jpg');
-
-//   try {
-//     final uploadTask = await storageRef.putFile(imageFile);
-//     if (uploadTask.state == TaskState.success) {
-//       final downloadUrl = await storageRef.getDownloadURL();
-//       await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-//         'profileImageUrl': downloadUrl,
-//       });
-//       setState(() {
-//         profileImageUrl = downloadUrl;
-//       });
-//       ScaffoldMessenger.of(context).showSnackBar(
-//         SnackBar(content: Text("Profile picture updated!")),
-//       );
-//     } else {
-//       throw Exception('Upload failed');
-//     }
-//   } catch (e) {
-//     ScaffoldMessenger.of(context).showSnackBar(
-//       SnackBar(content: Text("Image upload failed: $e")),
-//     );
-//   }
-// }
 
   void selectImageFromGallery() async {
     Uint8List? imgBytes = await pickImageBytes(ImageSource.gallery);

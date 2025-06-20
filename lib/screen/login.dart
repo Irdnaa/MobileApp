@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import '../home/homepage.dart';
 import 'forgot_password.dart';
 import 'register.dart';
-import 'auth_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../service/auth_service.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});

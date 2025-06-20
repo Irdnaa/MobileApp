@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:form_field_validator/form_field_validator.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'login.dart';
-import 'auth_service.dart';
+import '../service/auth_service.dart';
 import 'package:uuid/uuid.dart';
 
 class Register extends StatefulWidget {
