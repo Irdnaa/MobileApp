@@ -147,49 +147,61 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (_) {
         return Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('Edit Expense', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              SizedBox(height: 10),
-              TextField(
-                controller: _titleController,
-                decoration: InputDecoration(labelText: 'Title'),
-              ),
-              TextField(
-                controller: _amountController,
-                decoration: InputDecoration(labelText: 'Amount'),
-                keyboardType: TextInputType.number,
-                inputFormatters: [CurrencyInputFormatter()],
-              ),
-              SizedBox(height: 10),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.all(12),
-                  backgroundColor: Colors.teal,
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            left: 16,
+            right: 16,
+            top: 16,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Edit Expense', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                SizedBox(height: 10),
+                TextField(
+                  controller: _titleController,
+                  decoration: InputDecoration(labelText: 'Title'),
                 ),
-                child: Text('Save Changes'),
-                onPressed: () async {
-                  String updatedTitle = _titleController.text;
-                  final raw = _amountController.text.replaceAll(',', '');
-                  double? updatedAmount = double.tryParse(raw);
+                TextField(
+                  controller: _amountController,
+                  decoration: InputDecoration(labelText: 'Amount'),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [CurrencyInputFormatter()],
+                ),
+                SizedBox(height: 10),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.all(12),
+                    backgroundColor: Colors.teal,
+                  ),
+                  child: Text('Save Changes'),
+                  onPressed: () async {
+                    String updatedTitle = _titleController.text;
+                    final raw = _amountController.text.replaceAll(',', '');
+                    double? updatedAmount = double.tryParse(raw);
 
-                  if (updatedTitle.isEmpty || updatedAmount == null || updatedAmount <= 0) return;
+                    if (updatedTitle.isEmpty || updatedAmount == null || updatedAmount <= 0) return;
 
-                  _expenses[index] = Expense(title: updatedTitle, amount: updatedAmount, uuid: expense.uuid, timestamp: expense.timestamp);
-                  await _budgetService.saveExpenseList(_expenses);
-
-                  setState(() {});
-
-                  _titleController.clear();
-                  _amountController.clear();
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
+                    _expenses[index] = Expense(
+                      title: updatedTitle,
+                      amount: updatedAmount,
+                      uuid: expense.uuid,
+                      timestamp: expense.timestamp,
+                    );
+                    await _budgetService.saveExpenseList(_expenses);
+                    setState(() {});
+                    _titleController.clear();
+                    _amountController.clear();
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -199,35 +211,46 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   void _showAddExpenseModal() {
     showModalBottomSheet(
       context: context,
-      builder: (_) {
+      isScrollControlled: true, // This allows the modal to expand when the keyboard appears
+      builder: (context) {
         return Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Add New Expense', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              SizedBox(height: 10),
-              TextField(
-                controller: _titleController,
-                decoration: InputDecoration(labelText: 'Expense'),
-              ),
-              TextField(
-                controller: _amountController,
-                decoration: InputDecoration(labelText: 'Amount'),
-                keyboardType: TextInputType.number,
-                inputFormatters: [CurrencyInputFormatter()],
-              ),
-              SizedBox(height: 10),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.all(12),
-                  backgroundColor: Colors.teal,
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom, // Adjust for keyboard
+            left: 16,
+            right: 16,
+            top: 16,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min, // Shrinks to fit content
+              children: [
+                Text(
+                  'Add New Expense',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
-                onPressed: _addExpense,
-                child: Text('Add Expense'),
-              ),
-            ],
+                SizedBox(height: 10),
+                TextField(
+                  controller: _titleController,
+                  decoration: InputDecoration(labelText: 'Expense'),
+                ),
+                TextField(
+                  controller: _amountController,
+                  decoration: InputDecoration(labelText: 'Amount'),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [CurrencyInputFormatter()],
+                ),
+                SizedBox(height: 10),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.all(12),
+                    backgroundColor: Colors.teal,
+                  ),
+                  onPressed: _addExpense,
+                  child: Text('Add Expense'),
+                ),
+              ],
+            ),
           ),
         );
       },

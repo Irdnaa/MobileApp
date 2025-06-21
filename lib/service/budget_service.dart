@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -81,5 +82,38 @@ class BudgetService {
     } else {
       return prefs.getDouble('total_budget') ?? 0.0;
     }
+  }
+
+  Future<List<FlSpot>> generateBudgetTrendPoints() async {
+    final user = auth.currentUser;
+    if (user == null) return [];
+
+    final totalBudget = await loadBudget();
+    final dailyBudget = totalBudget / 30;
+
+    final expenses = await loadExpenseList();
+
+    // Group expenses by date
+    final Map<String, double> dailySpending = {};
+    for (final e in expenses) {
+      final day = DateTime(e.timestamp.year, e.timestamp.month, e.timestamp.day);
+      final key = day.toIso8601String();
+      dailySpending[key] = (dailySpending[key] ?? 0) + e.amount;
+    }
+
+    final sortedKeys = dailySpending.keys.toList()..sort();
+    double cumulative = 0;
+    List<FlSpot> points = [];
+
+    for (int i = 0; i < sortedKeys.length; i++) {
+      final dateKey = sortedKeys[i];
+      final spent = dailySpending[dateKey]!;
+      if (spent < dailyBudget) {
+        cumulative += dailyBudget - spent;
+      }
+      points.add(FlSpot(i.toDouble(), cumulative));
+    }
+
+    return points;
   }
 }
