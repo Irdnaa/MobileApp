@@ -17,6 +17,8 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   List<Expense> _expenses = [];
   double _budget = 0.0;
   bool _exceeded = false;
+  double _savingsGoal = 0.0;
+  bool _goalReached = false;
 
   double get _dailyBudget => _budget / 30;
 
@@ -29,10 +31,80 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     );
     _loadExpenses();
     _loadBudget();
+    _loadSavingsGoal();
   }
 
   final _titleController = TextEditingController();
   final _amountController = TextEditingController();
+
+  Future<void> _loadSavingsGoal() async {
+    double goal = await _budgetService.loadSavingsGoal();
+    setState(() {
+      _savingsGoal = goal;
+    });
+    _checkSavingsGoal();
+  }
+
+  void _checkSavingsGoal() {
+    final savings = _budget - _expenses.fold(0.0, (sum, e) => sum + e.amount);
+    if (savings >= _savingsGoal && _savingsGoal > 0 && !_goalReached) {
+      _goalReached = true;
+      _showSavingsGoalReachedDialog();
+    } else if (savings < _savingsGoal) {
+      _goalReached = false;
+    }
+  }
+
+  void _showSavingsGoalReachedDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('🎉 Goal Reached!'),
+        content: Text('Congratulations! You have saved RM${_savingsGoal.toStringAsFixed(2)}.'),
+        actions: [
+          TextButton(
+            child: Text('OK'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSavingsGoalDialog() {
+    final TextEditingController _goalController = TextEditingController(text: _savingsGoal.toStringAsFixed(2));
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Set Savings Goal'),
+        content: TextField(
+          controller: _goalController,
+          keyboardType: TextInputType.number,
+          inputFormatters: [CurrencyInputFormatter()],
+          decoration: InputDecoration(labelText: 'Savings Goal Amount'),
+        ),
+        actions: [
+          TextButton(child: Text('Cancel'), onPressed: () => Navigator.pop(context)),
+          ElevatedButton(
+            child: Text('Save'),
+            onPressed: () async {
+              final raw = _goalController.text.replaceAll(',', '');
+              double? goal = double.tryParse(raw);
+              if (goal != null && goal >= 0) {
+                await _budgetService.saveSavingsGoal(goal);
+                setState(() {
+                  _savingsGoal = goal;
+                });
+                _checkSavingsGoal();
+              }
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _loadBudget() async {
     double loaded = await _budgetService.loadBudget();
@@ -40,6 +112,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       _budget = loaded;
     });
     _checkExceeded();
+    _checkSavingsGoal();
   }
 
   void _checkExceeded() {
@@ -85,6 +158,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       _expenses = loaded;
     });
     _checkExceeded();
+    _checkSavingsGoal();
   }
 
   void _addExpense() async {
@@ -108,6 +182,8 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     _amountController.clear();
 
     Navigator.of(context).pop();
+
+    _checkSavingsGoal();
 
     if (_exceeded == false) {
       if (_todayExpenseTotal > _dailyBudget) {
@@ -138,6 +214,7 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     }
 
     setState(() {});
+    _checkSavingsGoal();
   }
 
   void _editExpense(int index) async {
@@ -296,12 +373,37 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     );
   }
 
+  void _repeatExpense(Expense expense) async {
+    final repeated = Expense(
+      title: expense.title,
+      amount: expense.amount,
+      uuid: Uuid().v4(), // New UUID
+      timestamp: DateTime.now(), // New timestamp
+    );
+
+    _expenses.add(repeated);
+    await _budgetService.saveExpenseList([repeated]);
+
+    setState(() {});
+
+    if (!_exceeded && _todayExpenseTotal > _dailyBudget) {
+      _exceeded = true;
+      _showDailyBudgetExceededDialog();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Expenses'),
         actions: [
+          IconButton(
+            icon: Icon(Icons.picture_as_pdf),
+            onPressed: () async {
+              await _budgetService.generateMonthlyExpensePdf(_expenses);
+            },
+          ),
           IconButton(
             icon: Icon(Icons.add),
             onPressed: _showAddExpenseModal,
@@ -340,6 +442,10 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
                   Text(
                     'Total Budget: RM${_budget.toStringAsFixed(2)}',
                     style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                  ),
+                  TextButton(
+                    onPressed: _showSavingsGoalDialog,
+                    child: Text('Set Savings Goal'),
                   ),
                 ],
               ),
@@ -395,6 +501,25 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
                   elevation: 4,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   child: ListTile(
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (_) => AlertDialog(
+                          title: Text('Repeat Expense'),
+                          content: Text('Repeat "${exp.title}" for RM${exp.amount.toStringAsFixed(2)}?'),
+                          actions: [
+                            TextButton(child: Text('Cancel'), onPressed: () => Navigator.pop(context)),
+                            ElevatedButton(
+                              child: Text('Confirm'),
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _repeatExpense(exp);
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                     title: Text(exp.title, style: TextStyle(fontWeight: FontWeight.bold)),
                     subtitle: Text('RM${exp.amount.toStringAsFixed(2)}'),
                     trailing: Row(

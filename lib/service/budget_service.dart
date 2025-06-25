@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../model/expense.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 class BudgetService {
   final FirebaseAuth auth;
@@ -93,13 +95,18 @@ class BudgetService {
 
     final expenses = await loadExpenseList();
 
-    // Group expenses by date
+    // Group expenses by day
     final Map<String, double> dailySpending = {};
     for (final e in expenses) {
       final day = DateTime(e.timestamp.year, e.timestamp.month, e.timestamp.day);
       final key = day.toIso8601String();
       dailySpending[key] = (dailySpending[key] ?? 0) + e.amount;
     }
+
+    print('🧾 Daily Spending:');
+    dailySpending.forEach((key, value) {
+      print('$key: RM${value.toStringAsFixed(2)}');
+    });
 
     final sortedKeys = dailySpending.keys.toList()..sort();
     double cumulative = 0;
@@ -111,9 +118,76 @@ class BudgetService {
       if (spent < dailyBudget) {
         cumulative += dailyBudget - spent;
       }
-      points.add(FlSpot(i.toDouble(), cumulative));
+      final point = FlSpot(i.toDouble(), cumulative);
+      points.add(point);
+    }
+
+    print('\n📈 FlSpot Points:');
+    for (final p in points) {
+      print('x: ${p.x}, y: ${p.y}');
     }
 
     return points;
+  }
+
+
+  Future<void> generateMonthlyExpensePdf(List<Expense> expenses) async {
+    final pdf = pw.Document();
+    final now = DateTime.now();
+
+    final currentMonthExpenses = expenses.where((e) =>
+    e.timestamp.year == now.year && e.timestamp.month == now.month).toList();
+
+    double total = currentMonthExpenses.fold(0.0, (sum, e) => sum + e.amount);
+
+    pdf.addPage(
+      pw.MultiPage(
+        build: (context) => [
+          pw.Header(level: 0, child: pw.Text('Monthly Expense Report - ${now.month}/${now.year}')),
+          pw.TableHelper.fromTextArray(
+            headers: ['Title', 'Amount (RM)', 'Date'],
+            data: currentMonthExpenses.map((e) => [
+              e.title,
+              e.amount.toStringAsFixed(2),
+              "${e.timestamp.day}/${e.timestamp.month}/${e.timestamp.year}"
+            ]).toList(),
+          ),
+          pw.SizedBox(height: 20),
+          pw.Paragraph(
+            text: 'Total Expenses: RM${total.toStringAsFixed(2)}',
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14),
+          ),
+        ],
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (format) async => pdf.save(),
+    );
+  }
+
+  Future<void> saveSavingsGoal(double goal) async {
+    final user = auth.currentUser;
+    final prefs = await SharedPreferences.getInstance();
+
+    if (user != null) {
+      await firestore.collection('savings_goal').doc(user.uid).set({
+        'goal': goal,
+      });
+    } else {
+      await prefs.setDouble('savings_goal', goal);
+    }
+  }
+
+  Future<double> loadSavingsGoal() async {
+    final user = auth.currentUser;
+    final prefs = await SharedPreferences.getInstance();
+
+    if (user != null) {
+      final doc = await firestore.collection('savings_goal').doc(user.uid).get();
+      return (doc.data()?['goal'] ?? 0).toDouble();
+    } else {
+      return prefs.getDouble('savings_goal') ?? 0.0;
+    }
   }
 }
