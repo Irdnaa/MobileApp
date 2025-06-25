@@ -115,9 +115,7 @@ class BudgetService {
     for (int i = 0; i < sortedKeys.length; i++) {
       final dateKey = sortedKeys[i];
       final spent = dailySpending[dateKey]!;
-      if (spent < dailyBudget) {
-        cumulative += dailyBudget - spent;
-      }
+      cumulative += dailyBudget - spent;
       final point = FlSpot(i.toDouble(), cumulative);
       points.add(point);
     }

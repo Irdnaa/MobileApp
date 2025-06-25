@@ -118,6 +118,9 @@ class _HomePageState extends State<HomePage> {
               }
 
               final graphData = snapshot.data as List<FlSpot>;
+              final minY = graphData.isNotEmpty
+                  ? graphData.map((e) => e.y).reduce((a, b) => a < b ? a : b)
+                  : 0.0;
 
               return Column(
                 children: [
@@ -125,35 +128,51 @@ class _HomePageState extends State<HomePage> {
                     padding: EdgeInsets.all(16.0),
                     child: Text('Budget Balance Trend', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   ),
-                  SizedBox(
-                    height: 300,
-                    child: LineChart(
-                      LineChartData(
-                        minY: 0,
-                        lineBarsData: [
-                          LineChartBarData(
-                            spots: graphData,
-                            color: Colors.green,
-                            barWidth: 2,
-                            belowBarData: BarAreaData(show: true, color: const Color.fromRGBO(0, 128, 0, 0.3)),
-                          )
-                        ],
-                        titlesData: FlTitlesData(
-                          bottomTitles: AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          leftTitles: AxisTitles(
-                            sideTitles: SideTitles(showTitles: true),
-                          ),
-                          topTitles: AxisTitles(
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0), // Adjust as needed
+                    child: SizedBox(
+                      height: 300,
+                      child: LineChart(
+                        LineChartData(
+                          minY: minY < 0 ? minY : 0,
+                          lineBarsData: [
+                            LineChartBarData(
+                              spots: graphData,
+                              color: graphData.isNotEmpty && graphData.last.y < 0 ? Colors.red : Colors.green,
+                              barWidth: 2,
+                              belowBarData: BarAreaData(
+                                show: true,
+                                color: (graphData.isNotEmpty && graphData.last.y < 0)
+                                    ? const Color.fromRGBO(255, 0, 0, 0.3)
+                                    : const Color.fromRGBO(0, 128, 0, 0.3),
+                              ),
+                            )
+                          ],
+                          titlesData: FlTitlesData(
+                            bottomTitles: AxisTitles(
                               sideTitles: SideTitles(showTitles: false),
-                          ),
-                          rightTitles: AxisTitles(
+                            ),
+                            leftTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 48, // Increase this for more space (default is 40)
+                                getTitlesWidget: (value, meta) => Text(
+                                  value.toStringAsFixed(0),
+                                  style: const TextStyle(fontSize: 12), // Smaller font
+                                  textAlign: TextAlign.left,
+                                ),
+                              ),
+                            ),
+                            topTitles: AxisTitles(
                               sideTitles: SideTitles(showTitles: false),
+                            ),
+                            rightTitles: AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
                           ),
+                          gridData: FlGridData(show: false),
+                          borderData: FlBorderData(show: false),
                         ),
-                        gridData: FlGridData(show: false),
-                        borderData: FlBorderData(show: false),
                       ),
                     ),
                   ),
