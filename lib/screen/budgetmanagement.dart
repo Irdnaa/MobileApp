@@ -4,8 +4,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:uuid/uuid.dart';
 import '../model/expense.dart';
 import '../service/budget_service.dart';
-import '../service/currency_input.dart';
-import 'login.dart';
+import '../widgets/budget_summary_card.dart';
+import '../widgets/custom_input_dialog.dart';
+import '../widgets/expense_form_bottom_sheet.dart';
+import '../widgets/expense_list_view.dart';
+import '../widgets/simple_alert_dialog.dart';
 
 class ExpenseHomePage extends StatefulWidget {
   @override
@@ -34,9 +37,6 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     _loadSavingsGoal();
   }
 
-  final _titleController = TextEditingController();
-  final _amountController = TextEditingController();
-
   Future<void> _loadSavingsGoal() async {
     double goal = await _budgetService.loadSavingsGoal();
     setState(() {
@@ -46,11 +46,12 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   }
 
   void _checkSavingsGoal() {
-    final savings = _budget - _expenses.fold(0.0, (sum, e) => sum + e.amount);
-    if (savings >= _savingsGoal && _savingsGoal > 0 && !_goalReached) {
+    final reached = _budgetService.hasReachedSavingsGoal(_budget, _savingsGoal, _expenses);
+
+    if (reached && !_goalReached) {
       _goalReached = true;
       _showSavingsGoalReachedDialog();
-    } else if (savings < _savingsGoal) {
+    } else if (!reached) {
       _goalReached = false;
     }
   }
@@ -72,36 +73,19 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   }
 
   void _showSavingsGoalDialog() {
-    final TextEditingController _goalController = TextEditingController(text: _savingsGoal.toStringAsFixed(2));
-
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text('Set Savings Goal'),
-        content: TextField(
-          controller: _goalController,
-          keyboardType: TextInputType.number,
-          inputFormatters: [CurrencyInputFormatter()],
-          decoration: InputDecoration(labelText: 'Savings Goal Amount'),
-        ),
-        actions: [
-          TextButton(child: Text('Cancel'), onPressed: () => Navigator.pop(context)),
-          ElevatedButton(
-            child: Text('Save'),
-            onPressed: () async {
-              final raw = _goalController.text.replaceAll(',', '');
-              double? goal = double.tryParse(raw);
-              if (goal != null && goal >= 0) {
-                await _budgetService.saveSavingsGoal(goal);
-                setState(() {
-                  _savingsGoal = goal;
-                });
-                _checkSavingsGoal();
-              }
-              Navigator.of(context).pop();
-            },
-          ),
-        ],
+      builder: (_) => CustomInputDialog(
+        title: 'Set Savings Goal',
+        labelText: 'Savings Goal Amount',
+        initialValue: _savingsGoal.toStringAsFixed(2),
+        onSubmitted: (value) async {
+          await _budgetService.saveSavingsGoal(value);
+          setState(() {
+            _savingsGoal = value;
+          });
+          _checkSavingsGoal();
+        },
       ),
     );
   }
@@ -116,41 +100,21 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
   }
 
   void _checkExceeded() {
-    if (_todayExpenseTotal > _dailyBudget) {
-      _exceeded = true;
-    } else {
-      _exceeded = false;
-    }
+    _exceeded = _budgetService.hasExceededDailyBudget(_budget, _expenses);
     setState(() {});
   }
-  
+
   void _showDailyBudgetExceededDialog() {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text('Budget Alert'),
-        content: Text('You have exceeded your daily budget of RM${_dailyBudget.toStringAsFixed(2)}.'),
-        actions: [
-          TextButton(
-            child: Text('OK'),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-        ],
+      builder: (_) => SimpleAlertDialog(
+        title: 'Budget Alert',
+        message: 'You have exceeded your daily budget of RM${_dailyBudget.toStringAsFixed(2)}.',
       ),
     );
   }
 
-  double get _todayExpenseTotal {
-    final now = DateTime.now();
-    return _expenses
-        .where((e) {
-      final timestamp = e.timestamp; // You'll need to add this field
-      return timestamp.year == now.year &&
-          timestamp.month == now.month &&
-          timestamp.day == now.day;
-    })
-        .fold(0.0, (sum, e) => sum + e.amount);
-  }
+  double get _todayExpenseTotal => _budgetService.calculateTodayExpenseTotal(_expenses);
 
   Future<void> _loadExpenses() async {
     List<Expense> loaded = await _budgetService.loadExpenseList();
@@ -159,39 +123,6 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     });
     _checkExceeded();
     _checkSavingsGoal();
-  }
-
-  void _addExpense() async {
-    List<Expense> newExpenses = [];
-    String title = _titleController.text;
-    String rawAmount = _amountController.text.replaceAll(',', '');
-    double? amount = double.tryParse(rawAmount);
-    String uuid = Uuid().v4();
-    DateTime timestamp = DateTime.now();
-
-    if (title.isEmpty || amount == null || amount <= 0) return;
-
-    _expenses.add(Expense(title: title, amount: amount, uuid: uuid, timestamp: timestamp));
-    newExpenses.clear();
-    newExpenses.add(Expense(title: title, amount: amount, uuid: uuid, timestamp: timestamp));
-    await _budgetService.saveExpenseList(newExpenses);
-
-    setState(() {});
-
-    _titleController.clear();
-    _amountController.clear();
-
-    Navigator.of(context).pop();
-
-    _checkSavingsGoal();
-
-    if (_exceeded == false) {
-      if (_todayExpenseTotal > _dailyBudget) {
-        _exceeded = true;
-        setState(() {});
-        _showDailyBudgetExceededDialog();
-      }
-    }
   }
 
   void _deleteExpense(List<Expense> expenses, int index) async {
@@ -217,159 +148,70 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
     _checkSavingsGoal();
   }
 
-  void _editExpense(int index) async {
+  void _editExpense(int index) {
     final expense = _expenses[index];
-    _titleController.text = expense.title;
-    _amountController.text = expense.amount.toStringAsFixed(2);
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (_) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            left: 16,
-            right: 16,
-            top: 16,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text('Edit Expense', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                SizedBox(height: 10),
-                TextField(
-                  controller: _titleController,
-                  decoration: InputDecoration(labelText: 'Title'),
-                ),
-                TextField(
-                  controller: _amountController,
-                  decoration: InputDecoration(labelText: 'Amount'),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [CurrencyInputFormatter()],
-                ),
-                SizedBox(height: 10),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.all(12),
-                    backgroundColor: Colors.teal,
-                  ),
-                  child: Text('Save Changes'),
-                  onPressed: () async {
-                    String updatedTitle = _titleController.text;
-                    final raw = _amountController.text.replaceAll(',', '');
-                    double? updatedAmount = double.tryParse(raw);
-
-                    if (updatedTitle.isEmpty || updatedAmount == null || updatedAmount <= 0) return;
-
-                    _expenses[index] = Expense(
-                      title: updatedTitle,
-                      amount: updatedAmount,
-                      uuid: expense.uuid,
-                      timestamp: expense.timestamp,
-                    );
-                    await _budgetService.saveExpenseList(_expenses);
-                    setState(() {});
-                    _titleController.clear();
-                    _amountController.clear();
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+      builder: (_) => ExpenseFormBottomSheet(
+        title: 'Edit Expense',
+        initialExpense: expense,
+        onSubmit: (title, amount) async {
+          _expenses[index] = Expense(
+            title: title,
+            amount: amount,
+            uuid: expense.uuid,
+            timestamp: expense.timestamp,
+          );
+          await _budgetService.saveExpenseList(_expenses);
+          setState(() {});
+          _checkSavingsGoal();
+        },
+      ),
     );
   }
 
   void _showAddExpenseModal() {
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true, // This allows the modal to expand when the keyboard appears
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom, // Adjust for keyboard
-            left: 16,
-            right: 16,
-            top: 16,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min, // Shrinks to fit content
-              children: [
-                Text(
-                  'Add New Expense',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 10),
-                TextField(
-                  controller: _titleController,
-                  decoration: InputDecoration(labelText: 'Expense'),
-                ),
-                TextField(
-                  controller: _amountController,
-                  decoration: InputDecoration(labelText: 'Amount'),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [CurrencyInputFormatter()],
-                ),
-                SizedBox(height: 10),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.all(12),
-                    backgroundColor: Colors.teal,
-                  ),
-                  onPressed: _addExpense,
-                  child: Text('Add Expense'),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+      isScrollControlled: true,
+      builder: (_) => ExpenseFormBottomSheet(
+        title: 'Add New Expense',
+        onSubmit: (title, amount) async {
+          final uuid = Uuid().v4();
+          final timestamp = DateTime.now();
+          final newExpense = Expense(title: title, amount: amount, uuid: uuid, timestamp: timestamp);
+
+          _expenses.add(newExpense);
+          await _budgetService.saveExpenseList([newExpense]);
+
+          setState(() {});
+          _checkSavingsGoal();
+
+          if (!_exceeded && _todayExpenseTotal > _dailyBudget) {
+            _exceeded = true;
+            _showDailyBudgetExceededDialog();
+          }
+        },
+      ),
     );
   }
 
   void _showBudgetEditDialog() {
-    final TextEditingController _budgetController = TextEditingController(text: _budget.toStringAsFixed(2));
-
     showDialog(
       context: context,
-      builder: (_) {
-        return AlertDialog(
-          title: Text('Edit Budget'),
-          content: TextField(
-            controller: _budgetController,
-            inputFormatters: [CurrencyInputFormatter()],
-            decoration: InputDecoration(labelText: 'Total Budget'),
-            keyboardType: TextInputType.number,
-          ),
-          actions: [
-            TextButton(
-              child: Text('Cancel'),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            ElevatedButton(
-              child: Text('Save'),
-              onPressed: () async {
-                final raw = _budgetController.text.replaceAll(',', '');
-                double? newBudget = double.tryParse(raw);
-                if (newBudget != null && newBudget >= 0) {
-                  await _budgetService.saveBudget(newBudget);
-                  setState(() {
-                    _budget = newBudget;
-                  });
-                }
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
+      builder: (_) => CustomInputDialog(
+        title: 'Edit Budget',
+        labelText: 'Total Budget',
+        initialValue: _budget.toStringAsFixed(2),
+        onSubmitted: (value) async {
+          await _budgetService.saveBudget(value);
+          setState(() {
+            _budget = value;
+          });
+        },
+      ),
     );
   }
 
@@ -412,128 +254,25 @@ class _ExpenseHomePageState extends State<ExpenseHomePage> {
       ),
       body: Column(
         children: [
-          GestureDetector(
-            onTap: _showBudgetEditDialog,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  Text('Your Budget', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  SizedBox(height: 4),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'RM${(_budget - _expenses.fold(0, (sum, item) => sum + item.amount)).toStringAsFixed(2)}',
-                        style: TextStyle(fontSize: 24, color: Colors.teal),
-                      ),
-                      SizedBox(width: 6),
-                      Icon(Icons.edit, size: 20, color: Colors.teal),
-                    ],
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Daily Budget: RM${(_dailyBudget - _todayExpenseTotal).toStringAsFixed(2)}',
-                    style: _exceeded
-                      ? TextStyle(fontSize: 14, color: Colors.red)
-                      : TextStyle(fontSize: 14, color: Colors.grey[600])
-                  ),
-                  Text(
-                    'Total Budget: RM${_budget.toStringAsFixed(2)}',
-                    style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-                  ),
-                  TextButton(
-                    onPressed: _showSavingsGoalDialog,
-                    child: Text('Set Savings Goal'),
-                  ),
-                ],
-              ),
-            ),
+          BudgetSummaryCard(
+            budget: _budget,
+            expenses: _expenses,
+            exceeded: _exceeded,
+            dailyBudget: _dailyBudget,
+            onEditBudget: _showBudgetEditDialog,
+            onSetGoal: _showSavingsGoalDialog,
           ),
           Divider(thickness: 1),
 
           Expanded(
-            child: _expenses.isEmpty
-                ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('No expenses added yet!', style: TextStyle(fontSize: 18)),
-                  SizedBox(height: 10),
-                  if (FirebaseAuth.instance.currentUser == null)
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const Login()),
-                        );
-                      },
-                      child: Text.rich(
-                        TextSpan(
-                          text: 'Log in',
-                          style: TextStyle(
-                            color: Colors.blue,
-                            decoration: TextDecoration.underline,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          children: [
-                            TextSpan(
-                              text: ' to load expense from cloud',
-                              style: TextStyle(
-                                fontWeight: FontWeight.normal,
-                                decoration: TextDecoration.none,
-                              ),
-                            )
-                          ],
-                        ),
-                      ),
-                    )
-                ],
-              ),
-            )
-                : ListView.builder(
-              itemCount: _expenses.length,
-              itemBuilder: (ctx, index) {
-                final exp = _expenses[index];
-                return Card(
-                  margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: ListTile(
-                    onTap: () {
-                      showDialog(
-                        context: context,
-                        builder: (_) => AlertDialog(
-                          title: Text('Repeat Expense'),
-                          content: Text('Repeat "${exp.title}" for RM${exp.amount.toStringAsFixed(2)}?'),
-                          actions: [
-                            TextButton(child: Text('Cancel'), onPressed: () => Navigator.pop(context)),
-                            ElevatedButton(
-                              child: Text('Confirm'),
-                              onPressed: () {
-                                Navigator.pop(context);
-                                _repeatExpense(exp);
-                              },
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                    title: Text(exp.title, style: TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('RM${exp.amount.toStringAsFixed(2)}'),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(icon: Icon(Icons.edit, color: Colors.orange), onPressed: () => _editExpense(index)),
-                        IconButton(icon: Icon(Icons.delete, color: Colors.red), onPressed: () => _deleteExpense(_expenses, index)),
-                      ],
-                    ),
-                  ),
-                );
-              },
+            child: ExpenseListView(
+              expenses: _expenses,
+              onEdit: _editExpense,
+              onDelete: _deleteExpense,
+              onRepeat: _repeatExpense,
             ),
-          ),
+          )
+
         ],
       ),
     );

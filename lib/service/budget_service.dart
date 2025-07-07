@@ -188,4 +188,23 @@ class BudgetService {
       return prefs.getDouble('savings_goal') ?? 0.0;
     }
   }
+
+  double calculateTodayExpenseTotal(List<Expense> expenses) {
+    final now = DateTime.now();
+    return expenses.where((e) =>
+    e.timestamp.year == now.year &&
+        e.timestamp.month == now.month &&
+        e.timestamp.day == now.day
+    ).fold(0.0, (sum, e) => sum + e.amount);
+  }
+
+  bool hasExceededDailyBudget(double budget, List<Expense> expenses) {
+    double daily = budget / 30;
+    return calculateTodayExpenseTotal(expenses) > daily;
+  }
+
+  bool hasReachedSavingsGoal(double budget, double savingsGoal, List<Expense> expenses) {
+    final savings = budget - expenses.fold(0.0, (sum, e) => sum + e.amount);
+    return savings >= savingsGoal && savingsGoal > 0;
+  }
 }
